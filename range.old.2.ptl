@@ -1,0 +1,63 @@
+
+    # Constructor for a stepped, edged, and
+    range from | (|) to | (|) step | : {
+        unordered read-only typed using stepped range [
+            "start" --> [@1[number] --- @2[ordering]],
+            "end" --> [@3[number] --- @4[ordering]],
+            "step" --> [@5],
+        ]
+    }
+
+    # Constructors - Operator-based ranges centred on a given value
+    | +- | (|) step | : { range from @1[number] - @2[number] (@3[ordering]) to @1[number] + @2[number] (@3[ordering]) step @4[number] }
+    | +- | (|) : { @1[number] +- @2[number] (@3[ordering]) step 2 * abs of @1[number] - @2[number] }
+    | +- | step | : { @1[number] +- @2[number] (inclusive) step @3[number] }
+    | +- | : { @1[number] +- @2[number] (inclusive) }
+
+    # Constructor aliases
+
+    # Same as +- above
+    | ± | (|) step | : {}
+    | ± | (|) : {}
+    | ± | step | : {}
+    | ± | : {}
+
+    | (|) to | (|) step | : using range from | (|) to | (|) step |
+    | (|) to | step | :     using range from | (|) to | step |
+    | to | (|) step | :     using range from | to | (|) step |
+    | to | step | :         using range from | to | step |
+    | (|) to | (|) :        using range from | (|) to | (|)
+    | (|) to | :            using range from | (|) to |
+    | to | (|) :            using range from | to | (|)
+    | to | :                using range from | to |
+
+    between | (|) and | (|) step | : using | (|) to | (|) step |
+    between | (|) and | step | :     using | (|) to | step |
+    between | and | (|) step | :     using | to | (|) step |
+    between | and | step | :         using | to | step |
+    between | (|) and | (|) :        using | (|) to | (|)
+    between | (|) and | :            using | (|) to |
+    between | and | (|) :            using | to | (|)
+    between | and | :                using | to |
+
+    # In-range check
+    # `something is between | (|) and | (|) step |`
+    | is | : {
+        range start : transform "start" to associated value in @2[range]
+        range end : transform "end" to associated value in @2[range]
+
+        | is after | : { transform @2[number] also passing @1[number] through @2[ordering] }
+        | is before | : { transform @1[number] also passing @2[number] through @2[ordering] }
+
+        @1[number] is after range start and @1[number] is before range end
+    }
+
+    # Sequence generator
+
+    sequence | from | until | : {
+        counter : mutable @2[any]
+        update | : @1[block]
+        using update counter
+    }
+
+    sequence from | : { sequence using + @1[] }

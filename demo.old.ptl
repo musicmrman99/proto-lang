@@ -1,0 +1,158 @@
+#{
+
+ABSOLUTELY MUST check through for the auto-multiplicitous abstraction.
+I'm pretty sure I've failed utterly in doing this right.
+
+}#
+
+#{ Language Constructs
+-------------------------------------------------- }#
+
+part of #{hello}# a line # An inline block comment
+#{
+    A block comment
+}#
+
+5 # A numeric value
+"5" # A textual value
+a variable : 5 # A constant
+var another variable : 5 # A variable
+a variable # A sentence (with no verb/function, that evaluates to a variable's value)
+
+a sentence : { log 5 } # A sentence template + a latent paragraph template (though this one isn't using templating functionality)
+a sentence # A sentence (that executes the latent paragraph template it's associated with, then evaluates to whatever that returns, ie. whatever `log` returns, ie. nothing)
+
+another sentence : { log <string> } # A sentence template + a latent paragraph template (that does use templating/parameters)
+another sentence "hello" # A sentence with a parameter - as it's not a map, the param is wrapped into a map
+
+x : ["a" --> "b"] # A constant map
+
+#{ Fundamental Sentences
+-------------------------------------------------- }#
+
+# Pretend these exist - implemented internally
+exec : {} # runs all blocks you give it and maps to their return values
+combine : {} # basically, flatten by one layer
+
+                                                                 # In JS (using format `<parameter index>:<parameter name>`):
+translate | using | : {}                                         # ie. 2:fn(1:keyMap)
+translate | also passing | using | : {}                          # ie. 3:fn(1:keyMap, 2:otherMap)
+translate | to associated value in | : {}                        # ie. 2:keyAssocMap[1:keyMap]
+translate | using associated block in | : {}                     # ie. 2:keyAssocMap[1:keyMap](1:keyMap)
+translate | also passing | using associated block in | : {}      # ie. 3:keyAssocMap[1:keyMap](1:keyMap, 2:otherMap)
+translate each | using | : {}                                    # ie. map(1:keyMap, (item) => 2:fn(item))
+translate each | also passing | using | : {}                     # ie. map(1:keyMap, (item) => 3:fn(item, 2:otherMap))
+translate each | to associated value in | : {}                   # ie. map(1:keyMap, (item) => 2:keyAssocMap[item])
+translate each | using associated block in | : {}                # ie. map(1:keyMap, (item) => 2:keyAssocMap[item](item))
+translate each | also passing | using associated block in | : {} # ie. map(1:keyMap, (item) => 3:keyAssocMap[item](item, 2:otherMap))
+
+# A one-to-many to many-to-many converter - very useful for >2 items connected to the same thing
+# Because ... One item: [a --> b]; two items: [a --> b <-- c]; three items: not possible without variables.
+associate each of | with | using | : {
+    associations : translate each <1:any> also passing <2:any> using <3:block>
+    combine associations
+}
+associate each of | with | : { associate all of <1:any> with <2:any> using { [<1:any> --- <2:any>] } }
+associate each of | to | : { associate all of <1:any> with <2:any> using { [<1:any> --> <2:any>] } }
+associate each of | from | : { associate all of <1:any> with <2:any> using { [<1:any> <-- <2:any>] } }
+disassociate each of | with | : { associate all of <1:any> with <2:any> using { [<1:any> -/- <2:any>] } }
+disassociate each of | to | : { associate all of <1:any> with <2:any> using { [<1:any> -/> <2:any>] } }
+disassociate each of | from | : { associate all of <1:any> with <2:any> using { [<1:any> </- <2:any>] } }
+
+#{ Types
+-------------------------------------------------- }#
+
+# Types are predicate functions.
+#{
+translate | using ...
+          V
+       static |
+              V
+           type of |
+                   V
+                   <> - which is the actual map that was given (use `<n:>` for non-first placeholder)
+}#
+
+# Example: A range type
+static range type : []
+range : {
+    translate static type of <> using associated block in [
+        static range type --> { true },
+        static not range type --> {
+            booleans : [
+                "range" --> one, associations of "range" in <"range" --> [number --> number]>
+                "inclusivity" --> one, associations of "inclusivity" in <"inclusivity" --> [string --> string]>
+            ]
+            all in booleans are true
+        },
+    ]
+}
+
+# Types
+
+# Example: A range constructor
+new range from | (|) to | (|) step | : {
+    normalising map : flatten [
+        associate all of ["inclusive", "inc"] to "inclusive",
+        associate all of ["exclusive", "ex"] to "exclusive"
+    ]
+    incFirst : translate <2:string> to associated value in normalising map
+    incSecond : translate <4:string> to associated value in normalising map
+
+    [
+        "range" --> [<1:number> --> <2:number>]
+        "inclusivity" --> [incFirst --> incSecond]
+    ]
+}
+
+# Aliases / short forms for a range
+between | (|) and | (|) : { new range from <1:number> (<2:string>) to <3:number> (<4:string>) }
+# ...
+| (|) to | (|) : { new range from <1:number> (<2:string>) to <3:number> (<4:string>) }
+| to | (|) : { new range from <1:number> ("inclusive") to <2:number> (<3:string>) }
+| (|) to | : { new range from <1:number> (<2:string>) to <3:number> ("inclusive") }
+| to | : { new range from <1:number> ("inclusive") to <2:number> ("inclusive") }
+
+# Example:
+between 1 and 10 ("ex") step 0.5 # ie. range(5, 11, 0.5) in Python
+
+#{ Familiar language features
+-------------------------------------------------- }#
+
+# Note: These are all expressions, not statements.
+
+not : { enclose { ! <block> } over <> }
+
+eval if function : {
+    combine [exec <function>, <not function>] # not ordered
+}
+
+# An 'if' statement
+# ----------
+if | then | otherwise | : {
+    translate <1:boolean> using associated block in [
+        true --> eval <2:any>,
+        false --> { eval if function <3:any> }
+    ]
+}
+if | then | : { if <1:boolean> then <2:block> otherwise {[]} }
+
+# If you want to call that `else`, not `otherwise`, then you can:
+if | then | else | : { if <1:boolean> then <2:any> otherwise <3:any> }
+
+# Example:
+some condition : true
+if some condition then { 3 } otherwise { 5 }
+
+# A 'switch' statement
+# ----------
+if | is | : { translate <1:any> using associated block in <2: any --> block> }
+
+# Example:
+some var : "something else"
+if some var is [
+    "something" --> { do this },
+    "something else" --> { do something else },
+    "a third thing" --> { do a third thing },
+    any --> { do the default case }
+]

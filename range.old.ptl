@@ -1,0 +1,148 @@
+
+{ # range (and all of its aliases)
+    #{ Other languages would need to do this to get similar behaviour (eg. Java-ish):
+        // You might have to implement ImmutableHashMap too
+        class Range extends ImmutableHashMap {
+            public final float start;
+            public final float end;
+            public final boolean incStart;
+            public final boolean incEnd;
+            public final float step;
+
+            Range(
+                    float start,
+                    float end,
+                    float step,
+                    boolean incStart,
+                    boolean incEnd
+            ) {
+                super();
+
+                // Some languages don't require these to be listed twice, eg. C++'s initialisation
+                this.start = start;
+                this.end = end;
+                this.step = step;
+                this.incStart = incStart;
+                this.incEnd = incEnd;
+            }
+
+            // some other stuff
+
+            // Note: This doesn't work for multiple ranges - you'd have to loop outside
+            public inRange(float number) {
+                boolean aboveStart = false;
+                if (this.incStart) {
+                    aboveStart = number >= this.start;
+                } else {
+                    aboveStart = number > this.start;
+                }
+
+                boolean belowEnd = false;
+                if (this.belowEnd) {
+                    belowEnd = number <= this.end;
+                } else {
+                    belowEnd = number < this.end;
+                }
+
+                return aboveStart && belowEnd;
+            }
+
+            // You must implement the iteration interface to be usable in a `for`/`foreach` loop, even in Python/JS/PHP.
+            public iter() {} // creates an iterator object, possibly another class, or ...
+            public next() {} // gets the next item / moves the cursor to the next item for 'this' object (both mutable), or ...
+            // you could use an eg. generator function in Python / JS - you'd still have to implement it, though
+        }
+
+        // You may not need a main() at all (eg. Python, JS, PHP, etc.)
+        main() {
+            // Looping
+            for (num : new Range(5, 6, 0.1, true, false)) { // "What do these parameters mean again?"
+                do something with num;
+            }
+
+            // 
+        }
+
+    And that's not mentioning all of the things you can do *after* the thing is created.
+    }#
+
+    # Type
+    range | : type from unordered read-only [
+        "start" --> [number --- string],
+        "end" --> [number --- string],
+        "step" --> [number]
+    ]
+
+    # Type Checker
+    range : { using range }
+
+    # Constructor
+    range from | (|) to | (|) step | : {
+        normalising map : combine [
+            associate each of ["inclusive", "inc"] to "inclusive",
+            associate each of ["exclusive", "ex"] to "exclusive"
+        ]
+        include first : transform @2[string] to associated values in normalising map
+        include second : transform @4[string] to associated values in normalising map
+
+        unordered read-only typed using range [
+            "start" --> [@1[number] --- include first],
+            "end" --> [@3[number] --- include second],
+            "step" --> @5,
+        ]
+    }
+
+    # Enum
+    inclusive : "inclusive"
+    exclusive : "exclusive"
+
+    # Constructor - Operator-based ranges centred on a given value
+    | +- | (|) step | : { range from @1[number] - @2[number] (@3[ordering]) to @1[number] + @2[number] (@3[ordering]) step @4[number] }
+    | +- | (|) : { @1[number] +- @2[number] (@3[ordering]) step 2 * abs of @1[number] - @2[number] }
+    | +- | step | : { @1[number] +- @2[number] (inclusive) step @3[number] }
+    | +- | : { @1[number] +- @2[number] (inclusive) }
+
+    # Constructor aliases
+
+    # Same as +- above
+    | ± | (|) step | : {}
+    | ± | (|) : {}
+    | ± | step | : {}
+    | ± | : {}
+
+    | (|) to | (|) step | : { range from @1[number] (@2[string]) to @3[number] (@4[string]) step @5[number] }
+    | (|) to | (|) : { @1[number] (@2[string]) to @3[number] (@4[string]) step 1 }
+    | to | (|) : { @1[number] ("inclusive") to @2[number] (@3[string]) }
+    | (|) to | : { @1[number] (@2[string]) to @3[number] ("inclusive") }
+    | to | : { @1[number] ("inclusive") to @2[number] ("inclusive") }
+
+    between | (|) and | (|) step | : using | (|) to | (|) step |
+    between | (|) and | (|)        : using | (|) to | (|)
+    between | and | (|)            : using | to | (|)
+    between | (|) and |            : using | (|) to |
+    between | and |                : using | to |
+
+    # In-range check
+    # `something is between | (|) and | (|) step |`
+    | is | : {
+        # the_range.inclusivity[0]
+        range start : transform "start" to associated value in @2[range]
+        range end : transform "end" to associated value in @2[range]
+
+        {
+            transform @1[string] to associated value in [
+                "inclusive" --> using <= @1[number],
+                "exclusive" --> using < @1[number],
+            ]
+        }
+
+        transform each 
+    }
+
+    #{ Examples
+    -------------------- }#
+
+    example { # simple example
+        between 1 and 9 step 0.5 # ie. range(5, 11, 0.5) in Python
+    }
+}
