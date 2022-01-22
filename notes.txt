@@ -13,6 +13,11 @@ Data:
         uniqueness
         access (random, or put on/take off 'start' and/or 'end' only - list, stack, queue, deque)
 
+        symbolic types (data)
+        symbolic-ness (type/extraction maps)
+
+        enclosed values (blocks/pipelines)
+
 Processes:
     conversion between:
         number types

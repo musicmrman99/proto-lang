@@ -465,66 +465,274 @@ example { # break, with, and using (short-circuiting the transformation chain)
     #{ Examples
     -------------------- }#
 
-    example { # map from map (the ordinary use-case)
-        extract [any] from [1, 2]
-        # results in [1, 2] ([[1], [2]] internally)
+    examples { # Basics
+        example { # map from map (the ordinary use-case)
+            extract [any] from [1, 2]
+            # results in [1, 2] ([[1], [2]] internally)
+        }
+
+        example { # non-matching map from map (empty map)
+            extract [number] from ["string"]
+            # ie. internally: extract [[{...}]] from [["s", "t", "r", "i", "n", "g"]]
+            # outer blocks cancel out: extract [{...}] from ["s", "t", "r", "i", "n", "g"]
+            # [{}] is a block value (regardless of whether it's a block pipeline), so it is called on ["s", "t", "r", "i", "n", "g"]
+            # Results in [] (empty map), as `number` does not return true if given "string"
+        }
+
+        example { # type (ie. predicate block) from map
+            extract any from [1, 2]
+            # Results in [1, 2] (ie. the map, as it's of the type `any`)
+            # Would result in [] (null/empty map) if it contains nothing of the given type
+        }
+
+        example { # type from primitive
+            extract any from 1
+            # Results in 1 (1 is an 'any')
+        }
     }
 
-    example { # non-matching map from map (empty map)
-        extract [number] from ["string"]
-        # ie. internally: extract [[{...}]] from [["s", "t", "r", "i", "n", "g"]]
-        # outer blocks cancel out: extract [{...}] from ["s", "t", "r", "i", "n", "g"]
-        # [{}] is a block value (regardless of whether it's a block pipeline), so it is called on ["s", "t", "r", "i", "n", "g"]
-        # Results in [] (empty map), as `number` does not return true if given "string"
+    examples { # Basics - Associations (groups)
+        example { # Multi-match on associated values
+            extract [number --- number] from [56 --- 67 --- 78]
+            #{
+                This is because it consideres [56 --- 67 --- 78] to be two cases of [number --- number] (ie. 56 --- 67 and 67 --- 78).
+                The 67 is only duplicated in the resulting map if the given map isn't a `unique` map (see "Maps - Basic Properties"
+                for details about `unique`).
+            }#
+        }
     }
 
-    example { # type (ie. predicate block) from map
-        extract any from [1, 2]
-        # Results in [1, 2] (ie. the map, as it's of the type `any`)
-        # Would result in [] (null/empty map) if it contains nothing of the given type
+    examples { # Primitive composites
+        examples { # Matching Compositions
+            example { # primitive type from primitive
+                extract number from 6
+                [ [META], {} ]
+                [ [META], 6  ] # matches
+            }
+
+            example { # map of primitive type from primitive
+                extract [number] from [6]
+                [ [META], [[META], {}] ]
+                [ [META], [[META], 6 ] ] # matches
+            }
+        }
+
+        examples { # Folding
+            example { # map of primitive type from map of primitives
+                extract [number] from [6, 9]
+                [ [META], [[META], {}]               ]
+                [ [META], [[META], {}], [[META], {}] ] # folds map of block (it's a group in an extraction map, so folds)
+                [ [META], [[META], 6 ], [[META], 9 ] ] # matches
+            }
+
+            example { # primitive type from multi-dimentional primitive (nubmer)
+                extract number from combine [6, 9]
+                [ [META], {}     ]
+                [ [META], {}, {} ] # folds block (it's a group in an extraction map, so folds)
+                [ [META], 6 , 9  ] # matches
+            }
+
+            example { # map of primitive type from map of multi-dimentional numbers
+                # Note that all of this is only necessary if the maps aren't symbolically typed
+                extract [number] from [combine [6, 9], combine [5, 8]]
+                [ [META], [[META], {}    ]                   ]
+                [ [META], [[META], {}    ], [[META], {}    ] ] # folds outer group (map of block)
+                [ [META], [[META], {}, {}], [[META], {}, {}] ] # folds inner group (block)
+                [ [META], [[META], 6 , 9 ], [[META], 5 , 8 ] ] # matches
+            }
+        }
+
+        examples { # Wrapping - of extraction maps
+            #{
+                If the extraction encounters a shallower extraction map than map ...
+
+                As the group size of the extraction map (1) is <= the group size of the map being extracted from (1), the block
+                initially executes over the whole map (as it doesn't know what the block is checking for), but if it fails, then it
+                checks if the map being extracted from at this level contains exactly 1 group, and if so, 'wraps the group in another
+                map' (logically), and recurses to the next level of composition down.
+
+                This case of 'recursion' is usually implemented iteratively, as the item on the extraction map side doesn't actually
+                exist at this level of composition (and so doesn't have metadata) - mutating the extraction map is dangerous, copying
+                it is slow, and neither are necessary for a proper implementation.
+            }#
+
+            example { # primitive type from map of primitive
+                extract number from [6]
+                [ [META], {}           ] # executes on the map, results in false (not a number), so ...
+                [ [META], [        {}] ] # wraps
+                [ [META], [[META], 6 ] ] # matches
+            }
+
+            example { # primitive type from map of multi-dimensional primitive
+                extract number from [combine [6, 9]]
+                [ [META], {}               ] # executes on the map, results in false (not a number), so ...
+                [ [META], [        {}    ] ] # wraps group
+                [ [META], [        {}, {}] ] # folds group
+                [ [META], [[META], 6 , 9 ] ] # matches
+            }
+        }
+
+        examples { # Wrapping - of data maps
+            #{
+                If the extraction encounters a deeper extraction map than map ...
+
+                All groups in the map (except the meta block) are 'wrapped in a map' (logically), and the recursion continues on both
+                sides.
+            }#
+
+            example { # map of primitive type from primitive
+                extract [number] from 6
+                [ [META], [[META], {}] ]
+                [ [META],          6   ]
+                [ [META], [        6 ] ] # wraps group
+                                         # matches
+            }
+
+            example { # map of primitive type from multi-dimensional primitive
+                extract [number] from combine [6, 9]
+                [ [META], [[META], {}]               ]
+                [ [META],  6          ,  9           ]
+                [ [META], [        6 ], [        9 ] ] # wraps groups
+                [ [META], [[META], {}], [[META], {}] ] # folds map of block
+                                                       # matches
+            }
+        }
+
+        example { # Strings - awkward extractions (and usefulness of symbolic typing)
+            # Obviously, this would be VERY slow - O(n), where n is the length of the string ...
+            extract [string] from "hello"
+            [[{}]                             ]
+            [ "h",   "e",   "l",   "l",   "o" ]
+            [["h"], ["e"], ["l"], ["l"], ["o"]] # wrap groups (data)
+            [[{}] , [{}] , [{}] , [{}] , [{}] ] # fold
+                                                # match (slowly)
+
+            # ... which is why strings are symbolically typed:
+            extract string from "hello"
+            string = # VVV
+            [ [META: "symbolic" ---> true, ...], {}                  ]
+            [ [META: "types" --> [string], ...], "h","e","l","l","o" ] # matches symbolically
+
+            extract [string] from "hello"
+            string = [[META], {...}] # ie.       V-------------V
+            [ [META],                            [[META], {...}]     ]
+            [ [META: "types" --> [string], ...], "h","e","l","l","o" ] # DOES NOT match symbolically !!!
+        }
     }
 
-    example { # type from primitive
-        extract any from 1
-        # Results in 1 (1 is an 'any')
-    }
-
-    example { # Multi-match on associated values
-        extract [number --- number] from [56 --- 67 --- 78]
+    examples { # Custom composites
         #{
-            This is because it consideres [56 --- 67 --- 78] to be two cases of [number --- number] (ie. 56 --- 67 and 67 --- 78).
-            The 67 is only duplicated in the resulting map if the given map isn't a `unique` map (see "Maps - Basic Properties"
-            for details about `unique`).
+            Map of item and item only both extract right when the primitive values are of the same type as the whole,
+            eg. number, string, logical, block, but not multi-type composites.
         }#
-    }
 
-    example { # map from primitive
-        extract [1] from 5
-        # ie. internally: extract [[1]] from [5]
-        # Results in [] (internally: [1] is not in [5], only 5 is)
-        
-        extract [any] from 1
-        # ie. internally: extract [[{...}]] from [1]
-        # Results in 1 (primitive values are also of the type 'any')
+        feet | : type combine [number --- ["feet"]] # [[META], {}, ["f","e","e","t"]]
+        feet : { using feet }
+        | ft : { typed using feet combine [@1[number] --- ["feet"]] }
+        #{
+            Internally:
+            Given:    [[META], [[META], 1] --- [[META], ["f","e","e","t"]]]
+            Produces: [[META],          1  ---          ["f","e","e","t"] ]
+        }#
 
-        extract [string] from "hello"
-        # ie. internally: extract [[{...}]] from ["h", "e", "l", "l", "o"]
-        # Characters are also of type 'string', and since [{}] is a block, it's called on each of the characters in ["h", "e", "l", "l", "o"]
-        # Well ... it's actually optimised, but you know what I mean ...
-        # Results in "hello"
-    }
+        # The following sometimes excludes [META]s, and uses ["feet"] = [[META], "f","e","e","t"] to fit lines onto the screen
 
-    example { # primitive from primitive
-        extract 1 from 1
-        # Results in 1 ([1] internally - 1 is in [1])
+        examples { # Matching Compositions
+            example { # custom composite type from custom composite
+                extract feet from 5 ft
+                [ [META], {} --- ["feet"] ]
+                [ [META],  5 --- ["feet"] ] # Matches
+            }
 
-        extract 1 from 5
-        # Results in [] (internally: 1 is not in [5])
-    }
+            example { # map of custom composite type from map of custom composite
+                extract [feet] from [5 ft]
+                [ [META], [ [META], {} --- ["feet"] ] ]
+                [ [META], [ [META],  5 --- ["feet"] ] ] # Matches
+            }
+        }
 
-    example { # valid composite from valid composite (see `combine`)
-        extract combine [2, 3] from combine [1, 2, 3]
-        # Results in [2, 3] internally (2 and 3 are each in [1, 2, 3])
+        examples { # Folding
+            example { # map of custom composite type from map of custom composites
+                extract [feet] from [6 ft, 9 ft]
+                [ [META], [[META], {} --- ["feet"]]                                             ]
+                [ [META], [[META], {} --- ["feet"]], [[META], {} --- ["feet"]] ] # folds map of feet
+                [ [META], [[META],  6 --- ["feet"]], [[META],  9 --- ["feet"]] ] # matches
+            }
+
+            example { # custom composite type from multi-dimensional custom composites
+                extract feet from combine [6 ft, 9 ft]
+                [ [META], {} --- ["feet"]                                    ]
+                [ [META], {} --- ["feet"] , {} --- ["feet"] ] # fold group
+                [ [META], 6  --- ["feet"] , 9  --- ["feet"] ] # matches
+            }
+
+            example { # map of custom composite type from map of multi-dimensional custom composites
+                extract [feet] from [combine [6 ft, 9 ft], combine [5 ft, 8 ft]]
+                [ [ {} --- ["feet"] ]                                                        ]
+                [ [ 6  --- ["feet"], 9  --- ["feet"] ], [ 5  --- ["feet"], 8  --- ["feet"] ] ]
+                [ [ {} --- ["feet"]                  ], [ {} --- ["feet"]                  ] ] # fold outer group (map of group)
+                [ [ {} --- ["feet"], {} --- ["feet"] ], [ {} --- ["feet"], {} --- ["feet"] ] ] # fold inner group (feet, ie. number --- ["feet"])
+                                                                                               # matches
+            }
+        }
+
+        examples { # Wrapping - of extraction maps
+            example { # custom composite type from map of custom composite
+                extract feet from [6 ft]
+                [ [META], {} --- ["feet"]            ]
+                [ [META], [ [META],  6 --- ["feet"] ]] # not enough items in group to match extraction map group, so ...
+                [ [META], [         {} --- ["feet"] ]] # wrap groups in maps
+                                                    # matches
+            }
+
+            example { # custom composite from map of multi-dimentional custom composite
+                extract feet from [combine [6 ft, 9 ft]]
+                [ [META], {} --- ["feet"]                              ]
+                [ [META], [ [META], 6  --- ["feet"], 9  --- ["feet"] ] ] # not enough items in any group to match extraction map group
+                [ [META], [ [META], {} --- ["feet"]                  ] ] # wrap group in map
+                [ [META], [ [META], {} --- ["feet"], {} --- ["feet"] ] ] # fold group
+                                                                         # matches
+            }
+
+            example { # custom composite type from map of custom composites
+                extract feet from [6 ft, 9 ft]
+                [ [META], {} --- ["feet"] ] 
+                [ [META], [ [META], 6  --- ["feet"] ], [ [META], 9  --- ["feet"] ] ] # not enough items in any group to match extraction map group
+                [ [META], [         {} --- ["feet"] ]                              ] # wrap group
+                [ [META], [         {} --- ["feet"] ], [         {} --- ["feet"] ] ] # fold group
+                                                                                     # matches
+            }
+        }
+
+        examples { # Wrapping - of data maps
+            example { # map of custom composite type from custom composite (requires strategy backtracking)
+                extract [feet] from 6 ft
+                [ [META], [ [META], {} --- ["feet"] ] ]
+                [ [META], 6 --- ["feet"]              ]
+                # Enumerates the things it can do - fold extraction map, wrap data map - and uses copy-and-recurse to check each of them
+                # in order without mutating either map.
+                [ [META], [ [META], {} --- ["feet"] ], [ [META], {} --- ["feet"] ] ] # folds the map over both 6 and ["feet"] (ignoring `---`)
+                [ [META], [ [META], {} --- ["feet"] ] ] # results in nothing, so backtracks to last enumeration point
+                [ [META], [         6  --- ["feet"] ] ] # wrap data
+                                                        # matches
+            }
+
+            example { # map of custom composite type from multi-dimensional custom composite (requires strategy backtracking)
+                extract [feet] from combine [6 ft, 9 ft]
+                [ [META], [ [META], {} --- ["feet"] ]      ]
+                [ [META], 6  --- ["feet"], 9  --- ["feet"] ]
+                # Enumerates the things it can do - fold extraction map, wrap data map - and uses copy-and-recurse to check each of them
+                # in order without mutating either map.
+                [[{} --- ["feet"]], [{} --- ["feet"]], [{} --- ["feet"]], [{} --- ["feet"]]] # folds the map over 6, 9, and both ["feet"] (ignore `---`)
+                [6,                 ["feet"],          9,                 ["feet"]         ] # V
+                [[6              ], [["feet"]       ], [9              ], [["feet"]       ]] # wraps groups in map
+                                                                                             # no match
+                [ [META], [ [META], {} --- ["feet"] ]                              ] # backtracks to last enumeration point
+                [ [META], [         6  --- ["feet"] ], [         9  --- ["feet"] ] ] # wrap data groups
+                [ [META], [ [META], {} --- ["feet"] ], [ [META], {} --- ["feet"] ] ] # fold group
+                                                                                     # matches
+            }
+        }
     }
 }
 
@@ -667,211 +875,6 @@ example { # break, with, and using (short-circuiting the transformation chain)
             After doing that for each item, transform each finally results in the new map.
         }#
     }
-}
-
-problem (several) { # Extraction - solving the recursive and composite cases
-    { # Primitive composites
-        { # Matching Compositions
-            extract number from 6
-            [ [META], {} ]
-            [ [META], 6  ]
-
-            extract [number] from [6]
-            [ [META], [[META], {}] ]
-            [ [META], [[META], 6 ] ]
-        }
-
-        { # Folding
-            extract [number] from [6, 9]
-            [ [META], [[META], {}]               ]
-            [ [META], [[META], {}], [[META], {}] ] # folds map of block (it's a group in an extraction map, so folds)
-            [ [META], [[META], 6 ], [[META], 9 ] ] # matches
-
-            extract number from combine [6, 9]
-            [ [META], {}     ]
-            [ [META], {}, {} ] # folds block (it's a group in an extraction map, so folds)
-            [ [META], 6 , 9  ] # matches
-
-            # Note that all of this is only necessary if the maps aren't symbolically typed
-            extract [number] from [combine [6, 9], combine [5, 8]]
-            [ [META], [[META], {}    ]                   ]
-            [ [META], [[META], {}    ], [[META], {}    ] ] # folds outer group (map of block)
-            [ [META], [[META], {}, {}], [[META], {}, {}] ] # folds inner group (block)
-            [ [META], [[META], 6 , 9 ], [[META], 5 , 8 ] ] # matches
-        }
-
-        { # Wrapping
-            #{
-                If the extraction encounters a shallower extraction map than map ...
-
-                As the group size of the extraction map (1) is <= the group size of the map being extracted from (1), the block
-                initially executes over the whole map (as it doesn't know what the block is checking for), but if it fails, then it
-                checks if the map being extracted from at this level contains exactly 1 group, and if so, 'wraps the group in another
-                map' (logically), and recurses to the next level of composition down.
-
-                This case of 'recursion' is usually implemented iteratively, as the item on the extraction map side doesn't actually
-                exist at this level of composition (and so doesn't have metadata) - mutating the extraction map is dangerous, copying
-                it is slow, and neither are necessary for a proper implementation.
-            }#
-
-            extract number from [6]
-            [ [META], {}           ]
-            [ [META], [        {}] ] # wraps
-            [ [META], [[META], 6 ] ] # matches
-
-            extract number from [combine [6, 9]]
-            [ [META], {}               ]
-            [ [META], [        {}    ] ] # wraps group
-            [ [META], [        {}, {}] ] # folds group
-            [ [META], [[META], 6 , 9 ] ] # matches
-
-            #{
-                If the extraction encounters a deeper extraction map than map ...
-
-                All groups in the map (except the meta block) are 'wrapped in a map' (logically), and the recursion continues on both
-                sides.
-            }#
-
-            extract [number] from 6
-            [ [META], [[META], {}] ]
-            [ [META],          6   ]
-            [ [META], [        6 ] ] # wraps group
-                                     # matches
-
-            extract [number] from combine [6, 9]
-            [ [META], [[META], {}]               ]
-            [ [META],  6          ,  9           ]
-            [ [META], [        6 ], [        9 ] ] # wraps groups
-            [ [META], [[META], {}], [[META], {}] ] # folds map of block
-                                                   # matches
-        }
-    }
-
-    { # Custom composites
-        #{
-            Map of item and item only both extract right when the primitive values are of the same type as the whole,
-            eg. number, string, logical, block, but not multi-type composites.
-        }#
-
-        feet | : type combine [number --- ["feet"]] # [[META], {}, ["f","e","e","t"]]
-        feet : { using feet }
-        | ft : { typed using feet combine [@1[number] --- ["feet"]] }
-        #{
-            Internally:
-            Given:    [[META], [[META], 1] --- [[META], ["f","e","e","t"]]]
-            Produces: [[META],          1  ---          ["f","e","e","t"] ]
-        }#
-
-        { # Matching Compositions
-            extract feet from 5 ft
-            [ [META], {} --- [[META], "f","e","e","t"] ]
-            [ [META],  5 --- [[META], "f","e","e","t"] ] # Matches
-
-            extract [feet] from [5 ft]
-            [ [META], [ [META], {} --- [[META], "f","e","e","t"] ] ]
-            [ [META], [ [META],  5 --- [[META], "f","e","e","t"] ] ] # Matches
-        }
-
-        { # Folding
-            extract [feet] from [6 ft 9 ft]
-            [ [META], [[META], {} --- [[META], "f","e","e","t"]]                                             ]
-            [ [META], [[META], {} --- [[META], "f","e","e","t"]], [[META], {} --- [[META], "f","e","e","t"]] ] # folds map of feet
-            [ [META], [[META],  6 --- [[META], "f","e","e","t"]], [[META],  9 --- [[META], "f","e","e","t"]] ] # matches
-
-            extract feet from combine [6 ft, 9 ft]
-            [ [META], {} --- [[META], "f","e","e","t"]                                    ]
-            [ [META], {} --- [[META], "f","e","e","t"] , {} --- [[META], "f","e","e","t"] ] # fold group
-            [ [META], 6  --- [[META], "f","e","e","t"] , 9  --- [[META], "f","e","e","t"] ] # matches
-
-            extract [feet] from [combine [6 ft, 9 ft], combine [5 ft, 8 ft]]
-            # Excluding [META]s, and let ["feet"] = [[META], "f","e","e","t"] (to fit lines onto the screen)
-            [ [ {} --- "feet" ]                                                  ]
-            [ [ 6  --- "feet", 9  --- "feet" ], [ 5  --- "feet", 8  --- "feet" ] ]
-            [ [ {} --- "feet"                ], [ {} --- "feet"                ] ] # fold outer group (map of group)
-            [ [ {} --- "feet", {} --- "feet" ], [ {} --- "feet", {} --- "feet" ] ] # fold inner group (feet, ie. number --- "feet")
-                                                                                   # matches
-        }
-
-        { # Wrapping
-            transform "__meta__" to associated value in mutable unique "hello"
-            extract feet from [6 ft] # fine
-            [ [META], {} --- [[META], "f","e","e","t"]            ]
-            [ [META], [ [META],  6 --- [[META], "f","e","e","t"] ]] # not enough items in group to match extraction map group, so ...
-            [ [META], [         {} --- [[META], "f","e","e","t"] ]] # wrap groups in maps
-                                                                    # matches
-
-            extract feet from [combine [6 ft, 9 ft]]
-
-            extract [feet] from 6 ft # broken
-            [ [META], [ [META], {} --- [[META], "f","e","e","t"] ] ]
-            [ [META], 6 --- ["f","e","e","t"]                      ]
-
-            #
-            extract [feet] from combine [6 ft, 9 ft]
-        }
-    }
-
-    #{
-        I tried:
-        - special-casing the bottom level (eg. a `number` is a primitive number, or a map with a number in it)
-          - doesn't work with higher composition level custom types
-          - doesn't work with custom composites
-
-        - moving that special case to every case (all types must check for an array of X)
-          - moves us back to square one - doesn't fix the problem
-
-        Finally, an answer:
-        - keep the automatic wrapping of primitives in a map
-        - keep the behaviour of `apply`, `transform`, `transform each`, and `combine`
-        - make `number`, etc. a map of a block (it already was), and the inner block execute against the
-          primitive value of maps it's extracting from (ie. only a primitive number is a `number`).
-        - make custom ordinary types and custom composite types work the same way
-        - make `extract`/`@n[]` dictate the behaviour of what all types represent
-          - makes ALL TYPES (literals, primitive, custom composite, and custom) be allow 'a map of an item is an item'.
-          - in fact, it usees a recursive definition for 'one item'
-    }#
-
-    #{ Not Numbers
-    ------------------ }#
-
-    [ [META], [ [META], [[META], 6], [[META], 9] ] ] # not a number
-
-    # ------------------
-
-    [[{}]]
-    =
-    #        V------------------------V  contains a map
-    [[META], [                        ]]
-            [[META], [            ]] # also contains a map
-                        [[META], {}]   # contains a raw block
-    =
-    [[META], [[META], [[META], {}]]]
-
-    # ------------------
-
-    combine {}
-    =
-    [[META], [{}]]
-    ->
-    [[META], {} ]
-    # ^           ^ - removed (no 2nd level to remove)
-    #          ^^ - ignores non-maps, so this becomes:
-    =
-    []       # language
-    =
-    [[META]] # impl
-
-    # ------------------
-
-    combine [{}, {}]
-    =
-    [[META], [                           ]]
-            [[META], {}],  [[META], {}]
-    ->
-    [[META], [                           ]]
-            [[META], {}],  [[META], {}]
-    #        ^^          ^   ^          ^^ - gone (two levels)
-    [[META], {}, {}]
 }
 
 idea { # Dates (constructing and using composites)
