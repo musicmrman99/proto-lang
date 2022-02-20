@@ -1,6 +1,6 @@
 #{
     language: |"[]{}:@#,
-    default sentence: ¬!£$%^*-~=<>
+    default sentence: ¬!£$%^*-+~=<>
     not special: ()-_'
         Note: `| - |` is a default sentence (subtraction), but `-` can also be used in other sentences
     not taken: `;./?&
@@ -40,6 +40,22 @@
     a variable # A sentence (evaluates to a value - in this case, the value 5)
 }
 
+question {
+    #{
+        should there be a way to specify a one-to-many relationship?
+        how would that be done, considering the sentence evaluation mechanism?
+
+        see http://www.cs.columbia.edu/~sedwards/classes/2014/w4115-fall/proposals/GPL.pdf
+        they proposed a syntax for adjacency, which would become something like (in my language):
+    }#
+
+    # space-delimited? not pretty
+    # end-of-sentence-delimited? might lead to unresolvable ambiguous sentences
+    # comma-delimited? but then you get 'is this another item in the adjacency list, or just another item' problem
+    # end of set is newline-delimited? like other sentences, but might lead to lots of short lines
+    ["a" -->: "b" "c"] # note the colon (gives this two meanings in different contexts !! )
+}
+
 { # Maps - Basics
     # Note: All of these use default properties (see next section).
 
@@ -72,13 +88,11 @@
 
     # Associations:
     ["a" --- "b"] # A map with two items with a bi-directional association
-    ["a" <-> "b"] # Same as above
     ["a" --> "b"] # A map with two items with a uni-directional association from "a" to "b"
     ["a" <-- "b"] # A map with two items with a uni-directional association from "b" to "a"
 
     # Disassociations:
     ["a" -/- "b"] # A map with two items with a bi-directional disassociation
-    ["a" </> "b"] # Same as above
     ["a" -/> "b"] # A map with two items with a uni-directional disassociation from "a" to "b"
     ["a" </- "b"] # A map with two items with a uni-directional disassociation from "b" to "a"
 
@@ -584,7 +598,7 @@ example { # break, with, and using (short-circuiting the transformation chain)
                 extract [number] from 6
                 [ [META], [[META], {}] ]
                 [ [META],          6   ]
-                [ [META], [        6 ] ] # wraps group
+                [ [META], [        6 ] ] # wraps group (primitives only)
                                          # matches
             }
 
@@ -592,11 +606,36 @@ example { # break, with, and using (short-circuiting the transformation chain)
                 extract [number] from combine [6, 9]
                 [ [META], [[META], {}]               ]
                 [ [META],  6          ,  9           ]
-                [ [META], [        6 ], [        9 ] ] # wraps groups
+                [ [META], [        6 ], [        9 ] ] # wraps groups (primitives only)
                 [ [META], [[META], {}], [[META], {}] ] # folds map of block
                                                        # matches
             }
         }
+
+        #{
+            The algorithm should make a distinction after wrapping between primitive values and map values, perhaps
+            by adding a dedicated type to the wrapping map, eg. "primitive-unit". Then, the four possible options for
+            'fold-after-wrap' in an extraction map are:
+
+            - none (neither maps nor primitives)
+            - primitives only
+            - maps only
+            - both (maps and primitives)
+
+            The default for the primitive type maps should be:
+
+            - null    - none (nothing to fold anyway)
+            - number  - primitives only (support multi-dimensional number composites, but forbid 'a matrix of numbers is a number' problems)
+            - string  - primitives only (necessary for strings, but forbids 'a matrix of strings is a string' problems)
+            - logical - primitives only (support bit field logical composites, but forbid 'a matrix of logicals is a logical' problems)
+            - block   - primitives only (support block pipelines, but forbid 'a matrix of blocks is a block' problems)
+            - map     - maps only (a map of primitives shouldn't be considered a map - that's a composite; don't waste time trying to fold
+                        over a composite's contents)
+
+            - composite - ???
+            - any       - both (usually matches any value symbolically, but in case symbolic checking is disabled, then this will make
+                          procedural typing work, albeit slowly)
+        }#
 
         example { # Strings - awkward extractions (and usefulness of symbolic typing)
             # Obviously, this would be VERY slow - O(n), where n is the length of the string ...
@@ -617,6 +656,10 @@ example { # break, with, and using (short-circuiting the transformation chain)
             string = [[META], {...}] # ie.       V-------------V
             [ [META],                            [[META], {...}]     ]
             [ [META: "types" --> [string], ...], "h","e","l","l","o" ] # DOES NOT match symbolically !!!
+            #{
+                heuristics? "if first char is string, then check type"?
+                but if it's a composite containing a string, then it will consider it a string (because `combine` also combines types)
+            }#
         }
     }
 
@@ -709,10 +752,16 @@ example { # break, with, and using (short-circuiting the transformation chain)
                 extract [feet] from 6 ft
                 [ [META], [ [META], {} --- ["feet"] ] ]
                 [ [META], 6 --- ["feet"]              ]
-                # Enumerates the things it can do - fold extraction map, wrap data map - and uses copy-and-recurse to check each of them
-                # in order without mutating either map.
-                [ [META], [ [META], {} --- ["feet"] ], [ [META], {} --- ["feet"] ] ] # folds the map over both 6 and ["feet"] (ignoring `---`)
-                [ [META], [ [META], {} --- ["feet"] ] ] # results in nothing, so backtracks to last enumeration point
+                # Enumerates the things it can do - fold extraction map, wrap data map - and uses copy-and-recurse to
+                # check each of them in order without mutating either map.
+                [ [META], 6                          , ["feet"]                    ] # searches within group
+                [ [META], [ [META], {} --- ["feet"] ], [ [META], {} --- ["feet"] ] ] # folds the map over both 6 and ["feet"]
+                [ [META], [         6               ], [         ["feet"]          ] # wraps possibly-matching items in groups
+                                                                                     # (all are primitives except the string)
+                                                                                     # no match
+
+                # results in nothing, so backtracks to last enumeration point
+                [ [META], [ [META], {} --- ["feet"] ] ]
                 [ [META], [         6  --- ["feet"] ] ] # wrap data
                                                         # matches
             }
@@ -723,9 +772,10 @@ example { # break, with, and using (short-circuiting the transformation chain)
                 [ [META], 6  --- ["feet"], 9  --- ["feet"] ]
                 # Enumerates the things it can do - fold extraction map, wrap data map - and uses copy-and-recurse to check each of them
                 # in order without mutating either map.
-                [[{} --- ["feet"]], [{} --- ["feet"]], [{} --- ["feet"]], [{} --- ["feet"]]] # folds the map over 6, 9, and both ["feet"] (ignore `---`)
-                [6,                 ["feet"],          9,                 ["feet"]         ] # V
+                [6,                 ["feet"],          9,                 ["feet"]         ] # searches within groups
+                [[{} --- ["feet"]], [{} --- ["feet"]], [{} --- ["feet"]], [{} --- ["feet"]]] # folds the map over 6, 9, and both ["feet"]
                 [[6              ], [["feet"]       ], [9              ], [["feet"]       ]] # wraps groups in map
+                                                                                             # (all are primitives except the string)
                                                                                              # no match
                 [ [META], [ [META], {} --- ["feet"] ]                              ] # backtracks to last enumeration point
                 [ [META], [         6  --- ["feet"] ], [         9  --- ["feet"] ] ] # wrap data groups
@@ -1027,7 +1077,7 @@ typed
     ???
 }#
 
-example {
+example { # actor example
     #{
         In other languages, you often have to make domain types that constrain both the data they can holdand the
         operations you can perform on them. This is usually done with classes, especially those with getters and

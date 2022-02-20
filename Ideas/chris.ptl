@@ -1,0 +1,130 @@
+#{ List of unique things
+-------------------------------------------------- }#
+
+# sentences
+I am a legal sentence : 5 # : means 'is defined as'
+I am a legal sentence # allowed
+
+a function : {} # no distinction between values and functions (functional language)
+a function # allowed - evaluates to [] (as returned by default by a function)
+
+with | do something for | : { @1 ... @context }
+with "hello",
+    do something for 4,
+    do something for 6
+
+{ @1 } # params are positional, functions may use params without being assigned to a sentence template (ie. anonymous functions)
+# ... but you can't call a function without assigning it to a sentence template
+me | : { @1 }
+me 2
+
+# base data structure: map (ie. graph; yes I know that's confusing to non-beginners from other languages)
+[]
+
+# associations
+[5 <-- 1 --> 10]
+unique [1 --> 5, 1 --> 10]
+#{ both are:
+      5
+     / \
+    V   V
+    5   10
+
+... though have different meta-blocks (one has `unique` property, the other doesn't)
+}#
+
+# I'm still undecided on (they mean the same):
+[1 --- 5]
+# and/or ?
+[1 <-> 5]
+
+# composites
+1 # a map - internally it's  [1], where '1' is a primitive 1
+
+# 5 core sentences
+transform | ...      # doesn't change level of composition; a load of variations
+transform each | ... # doesn't change level of composition; a load of variations
+apply | to |         # doesn't change level of composition
+extract | from |     # doesn't change level of composition
+combine |            # does change level of composition - is like array_merge(), but for maps. it ignores all non-map elements
+
+# composites
+combine [1, 2, 3]     # internally combining [[1], [2], [3]], so results in a *number* - internally [1, 2, 3] (where 1/2/3 are primitive numbers)
+combine [3, "feet"]   # this is a valid thing to do
+feet | : type from combine [number, "feet"] # this type, to be precise
+feet : { using feet } # can you figure this out? not always, so use | where it's ambiguous - `using` is syntactic anyway
+
+# types
+type # the type of types - yes, it is the type of itself (ala Python)
+type from [string]
+
+
+
+# extract
+extract string from "" # ie. [{}] from [] - the empty string is like null, but is `typed using string`
+extract
+extract [string --> string] from [] # means
+
+#{
+    now ... if we define `[a]` (a map containing `a`) to be the same as `a` ...
+
+    there's a reason people don't do this
+    but I want to
+}#
+
+#{ Sentence Ambiguity and Disambiguation
+-------------------------------------------------- }#
+
+we saw | : { [@1] }
+we saw | with | : { ["seen" --> @1, "by using" --> @2] } # @2 is what we used to see
+
+the man : ["man"]
+the man with | : { ["man", "inventory" --> [@1]] } # @1 belongs to 'the man'
+
+the telescope : "the telescope"
+
+# "syntactic ambiguity":
+We saw the man with the telescope
+#{
+  (We saw (the man) with (the telescope))
+  (We saw (the man with (the telescope))) <-- V
+}#
+
+#{
+strategy: longest-match
+we saw |
+       the man with |
+                    the telescope
+
+we cannot get the other one without trying ...
+}#
+
+# we can force the other one using (|) or a 'with' version:
+(|) : { @1 }
+with | we saw | : { we saw @1 with @context }
+
+we saw (the man) with the telescope # works
+we saw (the man ) with the telescope # does NOT work without `(| ) : { @1 }` - be careful
+with the telescope, we saw the man # can't use this in 
+
+# could we force precedence? ... I'm not comfortable with this idea.
+| + | :-2: {  }
+| * | :-1: {  }
+| ^ | :0: {  }
+default: 1
+
+# This language is always left-associative and has no precedence
+1 + 2 + 3
+(1 + 2) + 3 # <-- V
+1 + (2 + 3)
+
+1 + 2 * 3
+(1 + 2) * 3 # <-- still does this V
+1 + (2 * 3) # <-- we want this
+
+#{
+    Always does te 2nd, because
+      | + |
+      | * |
+      ^ expands as far as it can
+}#
