@@ -6,35 +6,36 @@ options {
 
 program : newline? expression+ EOF ;
 
-expression : (expressionAtom | newline)+ ;
+expression : (expression_atom | newline)+ ;
 
-expressionAtom :
+expression_atom :
     /* Comments */
-    anyWhitespace? COMMENT_LINE_OPEN (~NEWLINE)* #comment_line
+    any_whitespace? COMMENT_LINE_OPEN (~NEWLINE)* #comment_line
   | COMMENT_BLOCK_OPEN (~COMMENT_BLOCK_CLOSE)* COMMENT_BLOCK_CLOSE #comment_block
 
     /* Literals */
-  | LIT_NUMBER #lit_number
-  | LIT_STRING #lit_string
-  | LIT_LOGICAL #lit_logical
-
-    /* Recursive Literals */
+  | NUMBER_LITERAL #lit_number
+  | STRING_LITERAL #lit_string
+  | LOGICAL_LITERAL #lit_logical
   | map_literal #lit_map
+  | block_literal #lit_block
     
-  | (OPEN_BLOCK anyWhitespace?
-        expression*
-    anyWhitespace? CLOSE_BLOCK) #lit_block
-    
-    /* Sentences */
+    /* Sentences and Sentence Templates */
   | (WORD | SPACE)+ #sentence_fragment
+  | PLACEHOLDER #placeholder_point
+  | any_whitespace? IS_DEFINED_AS any_whitespace? #declaration_point
 
     /* Specific Syntaxes */
   | PARAMETER_OPEN PARAMETER_INDEX map_literal? #parameter
 ;
 
-map_literal : OPEN_MAP anyWhitespace?
-    expression? (ELEM_DELIM anyWhitespace? expression)*
-anyWhitespace? CLOSE_MAP ;
+map_literal : OPEN_MAP any_whitespace?
+    expression? (ELEM_DELIM any_whitespace? expression)*
+any_whitespace? CLOSE_MAP ;
+
+block_literal : OPEN_BLOCK any_whitespace?
+    expression*
+any_whitespace? CLOSE_BLOCK;
 
 newline : (NEWLINE SPACE?)+ ;
-anyWhitespace : (SPACE | NEWLINE)+ ;
+any_whitespace : (SPACE | NEWLINE)+ ;
