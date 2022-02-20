@@ -10,8 +10,8 @@ expression : (expression_atom | newline)+ ;
 
 expression_atom :
     /* Comments */
-    any_whitespace? COMMENT_LINE_OPEN (~NEWLINE)* #comment_line
-  | COMMENT_BLOCK_OPEN (~COMMENT_BLOCK_CLOSE)* COMMENT_BLOCK_CLOSE #comment_block
+    any_whitespace? OPEN_COMMENT_LINE (~NEWLINE)* #comment_line
+  | OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK #comment_block
 
     /* Literals */
   | NUMBER_LITERAL #lit_number
@@ -20,13 +20,16 @@ expression_atom :
   | map_literal #lit_map
   | block_literal #lit_block
     
-    /* Sentences and Sentence Templates */
-  | (WORD | SPACE)+ #sentence_fragment
-  | PLACEHOLDER #placeholder_point
-  | any_whitespace? IS_DEFINED_AS any_whitespace? #declaration_point
+    /* Associations */
+  | any_whitespace? ASSOCIATION any_whitespace? #association
 
     /* Specific Syntaxes */
-  | PARAMETER_OPEN PARAMETER_INDEX map_literal? #parameter
+  | OPEN_PARAMETER PARAMETER_INDEX map_literal? #parameter
+
+    /* Sentences and Sentence Templates */
+  | any_whitespace? IS_DEFINED_AS any_whitespace? #declaration_point
+  | PLACEHOLDER #placeholder_point
+  | (WORD | SPACE)+ #sentence_fragment
 ;
 
 map_literal : OPEN_MAP any_whitespace?

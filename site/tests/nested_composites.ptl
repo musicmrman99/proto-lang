@@ -1,0 +1,9 @@
+hello {
+    [
+        [a map can contain a map],
+        yes it can --> b,
+        {
+            and blocks with | placeholders too : yes
+        }
+    ]
+}
