@@ -1,3 +1,5 @@
-site/test
+.vscode
 node_modules
 .antlr
+
+site/test

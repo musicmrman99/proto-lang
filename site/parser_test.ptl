@@ -1,0 +1,8 @@
+hello {
+  this is a [
+    map example,
+    I think it works "yes it does"
+  ]
+  say @1 # hello
+}
+hello "me"
