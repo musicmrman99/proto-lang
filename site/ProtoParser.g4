@@ -4,13 +4,13 @@ options {
     tokenVocab = ProtoLexer;
 }
 
-program : newline? (comment | expression)+ EOF ;
+program : newline? expression_atom+ EOF ;
 
 comment : comment_line | comment_block ;
-comment_line : any_whitespace? OPEN_COMMENT_LINE (~NEWLINE)* ;
+comment_line : any_whitespace OPEN_COMMENT_LINE (~NEWLINE)* ;
 comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
 
-expression : (
+expression_atom : (
     // Values
     NUMBER_LITERAL
   | STRING_LITERAL
@@ -20,29 +20,32 @@ expression : (
   | parameter
 
     // Operators and Sentences (these are reorganised in 2nd-phase parse/link)
-  | association
-  | declaration_point
-  | placeholder_point
+  | association_operator
+  | declaration_operator
+  | placeholder_operator
   | sentence_fragment
 
     // Newline (determines sentence terminators during 2nd-phase parse/link)
   | newline
-)+ ;
+
+    // Comment (ignored)
+  | comment
+) ;
 
 map_literal : OPEN_MAP any_whitespace?
-    expression? (ELEM_DELIM any_whitespace? expression)*
+    (expression_atom+?)? (ELEM_DELIM any_whitespace? expression_atom+?)*
 any_whitespace? CLOSE_MAP ;
 
 block_literal : OPEN_BLOCK any_whitespace?
-    expression*
+    (expression_atom+?)?
 any_whitespace? CLOSE_BLOCK;
 
 parameter : OPEN_PARAMETER PARAMETER_INDEX map_literal? ;
 
-association : any_whitespace? ASSOCIATION any_whitespace? ;
+association_operator : any_whitespace ASSOCIATION any_whitespace ;
+declaration_operator : any_whitespace IS_DEFINED_AS any_whitespace ;
+placeholder_operator : PLACEHOLDER ;
 
-declaration_point : any_whitespace? IS_DEFINED_AS any_whitespace? ;
-placeholder_point : PLACEHOLDER ;
 sentence_fragment : (WORD | SPACE)+ ;
 
 newline : (NEWLINE SPACE?)+ ;
