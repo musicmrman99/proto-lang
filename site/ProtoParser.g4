@@ -12,9 +12,9 @@ comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
 
 expression_atom : (
     // Values
-    NUMBER_LITERAL
-  | STRING_LITERAL
-  | LOGICAL_LITERAL
+    number_literal
+  | string_literal
+  | logical_literal
   | map_literal
   | block_literal
   | parameter
@@ -31,6 +31,10 @@ expression_atom : (
     // Comment (ignored)
   | comment
 ) ;
+
+number_literal : NUMBER_LITERAL ;
+string_literal : STRING_LITERAL ;
+logical_literal : LOGICAL_LITERAL ;
 
 map_literal : OPEN_MAP any_whitespace?
     (expression_atom+?)? (ELEM_DELIM any_whitespace? expression_atom+?)*

@@ -1,7 +1,7 @@
 hello {
     [
         [a map can contain a map],
-        yes it can --> b,
+        yes it can --> 6,
         {
             and blocks with | placeholders too : yes
         }
