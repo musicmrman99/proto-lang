@@ -4,33 +4,30 @@ options {
     tokenVocab = ProtoLexer;
 }
 
-program : newline? expression+ EOF ;
+program : newline? (comment | expression)+ EOF ;
 
-expression : (expression_atom | newline)+ ;
+comment : comment_line | comment_block ;
+comment_line : any_whitespace? OPEN_COMMENT_LINE (~NEWLINE)* ;
+comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
 
-expression_atom :
-    /* Comments */
-    any_whitespace? OPEN_COMMENT_LINE (~NEWLINE)* #comment_line
-  | OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK #comment_block
+expression : (
+    // Values
+    NUMBER_LITERAL
+  | STRING_LITERAL
+  | LOGICAL_LITERAL
+  | map_literal
+  | block_literal
+  | parameter
 
-    /* Literals */
-  | NUMBER_LITERAL #lit_number
-  | STRING_LITERAL #lit_string
-  | LOGICAL_LITERAL #lit_logical
-  | map_literal #lit_map
-  | block_literal #lit_block
-    
-    /* Associations */
-  | any_whitespace? ASSOCIATION any_whitespace? #association
+    // Operators and Sentences (these are reorganised in 2nd-phase parse/link)
+  | association
+  | declaration_point
+  | placeholder_point
+  | sentence_fragment
 
-    /* Specific Syntaxes */
-  | OPEN_PARAMETER PARAMETER_INDEX map_literal? #parameter
-
-    /* Sentences and Sentence Templates */
-  | any_whitespace? IS_DEFINED_AS any_whitespace? #declaration_point
-  | PLACEHOLDER #placeholder_point
-  | (WORD | SPACE)+ #sentence_fragment
-;
+    // Newline (determines sentence terminators during 2nd-phase parse/link)
+  | newline
+)+ ;
 
 map_literal : OPEN_MAP any_whitespace?
     expression? (ELEM_DELIM any_whitespace? expression)*
@@ -39,6 +36,14 @@ any_whitespace? CLOSE_MAP ;
 block_literal : OPEN_BLOCK any_whitespace?
     expression*
 any_whitespace? CLOSE_BLOCK;
+
+parameter : OPEN_PARAMETER PARAMETER_INDEX map_literal? ;
+
+association : any_whitespace? ASSOCIATION any_whitespace? ;
+
+declaration_point : any_whitespace? IS_DEFINED_AS any_whitespace? ;
+placeholder_point : PLACEHOLDER ;
+sentence_fragment : (WORD | SPACE)+ ;
 
 newline : (NEWLINE SPACE?)+ ;
 any_whitespace : (SPACE | NEWLINE)+ ;
