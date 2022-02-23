@@ -6,10 +6,6 @@ options {
 
 program : newline? expression_atom+ EOF ;
 
-comment : comment_line | comment_block ;
-comment_line : any_whitespace OPEN_COMMENT_LINE (~NEWLINE)* ;
-comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
-
 expression_atom : (
     // Values
     number_literal
@@ -31,6 +27,10 @@ expression_atom : (
     // Comment (ignored)
   | comment
 ) ;
+
+comment : comment_line | comment_block ;
+comment_line : any_whitespace OPEN_COMMENT_LINE (~NEWLINE)* ;
+comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
 
 number_literal : INT_LITERAL (DECIMAL_POINT INT_LITERAL)? ;
 string_literal : STRING_LITERAL ;
