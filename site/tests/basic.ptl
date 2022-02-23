@@ -8,5 +8,6 @@ hello {
     I think it works "yes it does"
   ]
   say @1 # hello
+  get @2[hello]
 }
 hello "me"

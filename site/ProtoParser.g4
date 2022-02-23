@@ -32,7 +32,7 @@ expression_atom : (
   | comment
 ) ;
 
-number_literal : NUMBER_LITERAL ;
+number_literal : INT_LITERAL (DECIMAL_POINT INT_LITERAL)? ;
 string_literal : STRING_LITERAL ;
 logical_literal : LOGICAL_LITERAL ;
 
@@ -44,7 +44,9 @@ block_literal : OPEN_BLOCK any_whitespace?
     (expression_atom+?)?
 any_whitespace? CLOSE_BLOCK;
 
-parameter : OPEN_PARAMETER PARAMETER_INDEX map_literal? ;
+parameter_index : INT_LITERAL ;
+parameter_extraction : map_literal ;
+parameter : OPEN_PARAMETER parameter_index? parameter_extraction? ;
 
 association_operator : any_whitespace ASSOCIATION any_whitespace ;
 declaration_operator : any_whitespace IS_DEFINED_AS any_whitespace ;
