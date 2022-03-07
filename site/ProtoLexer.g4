@@ -1,11 +1,50 @@
 lexer grammar ProtoLexer;
 
-// Primitives
+/* Character Classes
+-------------------------------------------------- */
+
+/* Primitive Classes
+-------------------- */
+
+// Language reserved characters
+/* Excludes symbols that only appear in multi-symbol tokens (eg. the OPEN_COMMENT_LINE or
+   ASSOCIATION tokens), as using them in sentences can be avoided more easily. */
+fragment RESERVED_SYMBOL : [#",:@[\]{|}] ;
+
+// Comment-only characters
+fragment COMMENT_SYMBOL : [\u2500-\u257F] ; // \u2500-\u257F are the box-drawing characters
+
+// Spaces
+fragment SPACE : [\t ] ;
+fragment NEWLINE : ('\r'? '\n' | '\r') ;
+
+// Digit characters
 fragment DIGIT : [0-9] ;
+
+// Word characters - roughly ordered by ASCII/Unicode code point (excludes reserved symbols)
+fragment LETTER : [A-Za-zªºÀ-ÖØ-öø-ňŊ-ɏͰ-ϿЀ-ӿ] ;
+fragment GENERAL_SYMBOL : [!#&'()*\-./\\;?¡¿«»‹›…] ;
+fragment TYPOGRAPHIC_SYMBOL : [^_`~¨¯´¶¸–—†‡•Ⅰ-Ⅻ] ;
+fragment MATH_SYMBOL : [%+<=>¬°±µ·×÷‰′″\u0220-\u022F] ; // Excludes math chars that also have general uses, eg. the set [-*/]
+fragment CURRENCY_SYMBOL : [¤$£¥¢] ; // Others will be added later
+fragment DOMAIN_SYMBOL : [§©®] ;
+
+// Strings - special case
 fragment STRING_QUOTE : ["] ;
 fragment STRING_CHAR : ~["] ;
 fragment STRING_ESCAPE : '\\' . ;
-fragment WORD_CHAR : [a-zA-Z'_()-] ;
+
+/* Composite Classes
+-------------------- */
+
+fragment WORD_CHAR : (
+    LETTER
+  | GENERAL_SYMBOL
+  | TYPOGRAPHIC_SYMBOL
+  | MATH_SYMBOL
+  | CURRENCY_SYMBOL
+  | DOMAIN_SYMBOL
+) ;
 
 /* Global Tokens
 -------------------------------------------------- */
@@ -23,8 +62,8 @@ OPEN_PARAMETER : '@' ;
 
 WORD : WORD_CHAR ((WORD_CHAR | DIGIT)+)? ;
 
-SPACE : (' ' | '\t')+ ;
-NEWLINE : ('\r'? '\n' | '\r') ;
+ANY_SPACE : SPACE+ ;
+ANY_NEWLINE : NEWLINE ;
 
 /* Block Mode (default)
 -------------------------------------------------- */
@@ -71,5 +110,5 @@ mode MAP_MODE;
 
     MAP_MODE_WORD : WORD -> type(WORD) ;
 
-    MAP_MODE_SPACE : SPACE -> type(SPACE) ;
-    MAP_MODE_NEWLINE : NEWLINE -> type(NEWLINE) ;
+    MAP_MODE_ANY_SPACE : ANY_SPACE -> type(ANY_SPACE) ;
+    MAP_MODE_ANY_NEWLINE : ANY_NEWLINE -> type(ANY_NEWLINE) ;

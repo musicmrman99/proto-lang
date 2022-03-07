@@ -31,7 +31,7 @@ expression_atom : (
 ) ;
 
 comment : comment_line | comment_block ;
-comment_line : any_whitespace? OPEN_COMMENT_LINE (~NEWLINE)* ;
+comment_line : any_whitespace? OPEN_COMMENT_LINE (~ANY_NEWLINE)* ;
 comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
 
 number_literal : INT_LITERAL (DECIMAL_POINT INT_LITERAL)? ;
@@ -54,7 +54,7 @@ association_operator : any_whitespace ASSOCIATION any_whitespace ;
 declaration_operator : any_whitespace IS_DEFINED_AS any_whitespace ;
 placeholder_operator : PLACEHOLDER ;
 
-sentence_fragment : WORD | SPACE ;
+sentence_fragment : WORD | ANY_SPACE ;
 
-newline : (NEWLINE SPACE?)+ ;
-any_whitespace : (SPACE | NEWLINE)+ ;
+newline : (ANY_NEWLINE ANY_SPACE?)+ ;
+any_whitespace : (ANY_SPACE | ANY_NEWLINE)+ ;
