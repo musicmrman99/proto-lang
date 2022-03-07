@@ -54,7 +54,7 @@ association_operator : any_whitespace ASSOCIATION any_whitespace ;
 declaration_operator : any_whitespace IS_DEFINED_AS any_whitespace ;
 placeholder_operator : PLACEHOLDER ;
 
-sentence_fragment : (WORD | SPACE)+ ;
+sentence_fragment : WORD | SPACE ;
 
 newline : (NEWLINE SPACE?)+ ;
 any_whitespace : (SPACE | NEWLINE)+ ;
