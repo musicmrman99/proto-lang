@@ -8,7 +8,7 @@ program : newline? expression_atom+ EOF ;
 
 // Note: The order of groups matters, but rarely the order of nodes within groups.
 expression_atom : (
-    // Values
+    // Values (Literals and Syntactic Expressions)
     number_literal
   | string_literal
   | logical_literal
@@ -33,10 +33,10 @@ expression_atom : (
 
 // Comments
 comment : comment_line | comment_block ;
-comment_line : any_whitespace? OPEN_COMMENT_LINE (~ANY_NEWLINE)* ;
+comment_line : any_whitespace? OPEN_COMMENT_LINE (~NEWLINE)* ;
 comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
 
-// Values
+// Values (Literals and Syntactic Expressions)
 number_literal : INT_LITERAL (DECIMAL_POINT INT_LITERAL)? ;
 string_literal : STRING_LITERAL ;
 logical_literal : LOGICAL_LITERAL ;
@@ -44,6 +44,7 @@ logical_literal : LOGICAL_LITERAL ;
 map_literal : OPEN_MAP any_whitespace?
     (expression_atom+?)? (ELEM_DELIM any_whitespace? expression_atom+?)*
 any_whitespace? CLOSE_MAP ;
+association_operator : any_whitespace ASSOCIATION any_whitespace ;
 
 block_literal : OPEN_BLOCK any_whitespace?
     (expression_atom+?)?
@@ -54,13 +55,10 @@ parameter_extraction : map_literal ;
 parameter : OPEN_PARAMETER parameter_index? parameter_extraction? ;
 
 // Sentences
-sentence_fragment : WORD | ANY_SPACE ;
-
-// Operators
-association_operator : any_whitespace ASSOCIATION any_whitespace ;
 declaration_operator : any_whitespace IS_DEFINED_AS any_whitespace ;
 placeholder_operator : PLACEHOLDER ;
+sentence_fragment : WORD | SPACE ;
 
 // Language-aware kinds of whitespace
-newline : (ANY_NEWLINE ANY_SPACE?)+ ;
-any_whitespace : (ANY_SPACE | ANY_NEWLINE)+ ;
+newline : (NEWLINE SPACE?)+ ;
+any_whitespace : (SPACE | NEWLINE)+ ;
