@@ -25,7 +25,7 @@ expression_atom : (
 
     // Comments (ignored)
   | comment
-  
+
     // Sentences (reorganised in 2nd-phase parse/link)
   | sentence_fragment
 ) ;
