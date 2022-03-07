@@ -42,7 +42,7 @@ string_literal : STRING_LITERAL ;
 logical_literal : LOGICAL_LITERAL ;
 
 map_literal : OPEN_MAP any_whitespace?
-    (expression_atom+?)? (ELEM_DELIM any_whitespace? expression_atom+?)*
+    (expression_atom+? (ELEM_DELIM any_whitespace? expression_atom+?)*)?
 any_whitespace? CLOSE_MAP ;
 association_operator : any_whitespace ASSOCIATION any_whitespace ;
 
