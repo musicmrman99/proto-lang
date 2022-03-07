@@ -6,6 +6,7 @@ options {
 
 program : newline? expression_atom+ EOF ;
 
+// Note: The order of groups matters, but rarely the order of nodes within groups.
 expression_atom : (
     // Values
     number_literal
@@ -30,10 +31,12 @@ expression_atom : (
   | sentence_fragment
 ) ;
 
+// Comments
 comment : comment_line | comment_block ;
 comment_line : any_whitespace? OPEN_COMMENT_LINE (~ANY_NEWLINE)* ;
 comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
 
+// Values
 number_literal : INT_LITERAL (DECIMAL_POINT INT_LITERAL)? ;
 string_literal : STRING_LITERAL ;
 logical_literal : LOGICAL_LITERAL ;
@@ -50,11 +53,14 @@ parameter_index : INT_LITERAL ;
 parameter_extraction : map_literal ;
 parameter : OPEN_PARAMETER parameter_index? parameter_extraction? ;
 
+// Sentences
+sentence_fragment : WORD | ANY_SPACE ;
+
+// Operators
 association_operator : any_whitespace ASSOCIATION any_whitespace ;
 declaration_operator : any_whitespace IS_DEFINED_AS any_whitespace ;
 placeholder_operator : PLACEHOLDER ;
 
-sentence_fragment : WORD | ANY_SPACE ;
-
+// Language-aware kinds of whitespace
 newline : (ANY_NEWLINE ANY_SPACE?)+ ;
 any_whitespace : (ANY_SPACE | ANY_NEWLINE)+ ;
