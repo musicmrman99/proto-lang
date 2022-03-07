@@ -15,21 +15,23 @@ expression_atom : (
   | block_literal
   | parameter
 
-    // Operators and Sentences (these are reorganised in 2nd-phase parse/link)
+    // Operators (reorganised in 2nd-phase parse/link)
   | association_operator
   | declaration_operator
   | placeholder_operator
-  | sentence_fragment
 
-    // Newline (determines sentence terminators during 2nd-phase parse/link)
+    // Newlines (determines sentence terminators during 2nd-phase parse/link)
   | newline
 
-    // Comment (ignored)
+    // Comments (ignored)
   | comment
+  
+    // Sentences (reorganised in 2nd-phase parse/link)
+  | sentence_fragment
 ) ;
 
 comment : comment_line | comment_block ;
-comment_line : any_whitespace OPEN_COMMENT_LINE (~NEWLINE)* ;
+comment_line : any_whitespace? OPEN_COMMENT_LINE (~NEWLINE)* ;
 comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
 
 number_literal : INT_LITERAL (DECIMAL_POINT INT_LITERAL)? ;
