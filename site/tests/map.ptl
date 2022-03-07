@@ -1,0 +1,70 @@
+# Empty map (spaces not meaningful)
+[]
+[ ]
+[  ]
+[               ]
+[
+  
+]
+
+# Prefixing / Suffixing with sentence fragments (spaces are meaningful)
+hello [] goodbye
+hello [
+
+] goodbye
+
+# One item (spaces not meaningful)
+[example]
+[ example]
+[example ]
+[ example ]
+[
+  example
+]
+
+# One item (spaces not meaningful before/after `[`, `]`, or `,`)
+[example sentence]
+[ example sentence]
+[example sentence ]
+[ example sentence ]
+[
+  example sentence
+]
+
+# Multiple items (spaces not meaningful)
+[example,another]
+[example, another]
+[ example, another ]
+[
+  example, another
+]
+[example,
+another]
+[
+  example,
+  another
+]
+
+# Multiple items (spaces not meaningful before/after `[`, `]`, or `,`)
+[example sentence,another sentence]
+[example sentence, another sentence]
+[ example sentence, another sentence ]
+[
+  example sentence, another sentence
+]
+[example sentence,
+another sentence]
+[
+  example sentence,
+  another sentence
+]
+
+# Nesting
+[[]]           # map -> map
+[{}]           # map -> block
+[[{}]]         # map -> map -> block
+[[], []]       # map -> multiple map
+[{}, {}]       # map -> multiple block
+[[], {}]       # map -> mixed multiple map/block
+[[[[[[[]]]]]]] # recursively nested maps
+[{[{[{[]}]}]}] # recursively nested maps/blocks (cycling)

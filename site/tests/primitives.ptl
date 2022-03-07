@@ -1,0 +1,13 @@
+# Comment on first line
+#{
+  This is a test
+}#
+# This is a line comment
+0
+1563
+153.6
+"hello\"\n"
+true
+false
+[]
+{}

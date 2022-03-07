@@ -1,0 +1,5 @@
+hello
+hello : 5
+
+include spaces : sentence with spaces
+goodbye : hello + 5 * (10 - 5) / 10 # range of valid characters

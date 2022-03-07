@@ -15,6 +15,6 @@ javac test/Proto*.java -d test/build
 
 ## Test
 cd site/test/build
-grun Proto program -gui ../../tests/basic.ptl
-grun Proto program -gui ../../tests/nested_composites.ptl
-grun Proto program -gui ../../tests/types.ptl
+grun Proto program -gui ../../tests/primitives.ptl
+grun Proto program -gui ../../tests/sentence.ptl
+grun Proto program -gui ../../tests/map.ptl
