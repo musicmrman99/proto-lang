@@ -57,7 +57,7 @@ parameter : OPEN_PARAMETER parameter_index? parameter_extraction? ;
 // Sentences
 declaration_operator : any_whitespace IS_DEFINED_AS any_whitespace ;
 placeholder_operator : PLACEHOLDER ;
-sentence_fragment : WORD | SPACE ;
+sentence_fragment : WORD | SPACE | DECIMAL_POINT ;
 
 // Language-aware kinds of whitespace
 newline : (NEWLINE SPACE?)+ ;

@@ -12,7 +12,7 @@ fragment DIGIT : [0-9] ;
 
 // Word characters - roughly ordered by ASCII/Unicode code point (excludes reserved symbols)
 fragment LETTER : [A-Za-zªºÀ-ÖØ-öø-ňŊ-ɏͰ-ϿЀ-ӿ] ;
-fragment GENERAL_SYMBOL : [!#&'()*\-./\\;?¡¿«»‹›…] ;
+fragment GENERAL_SYMBOL : [!#&'()*\-/\\;?¡¿«»‹›…] ;
 fragment TYPOGRAPHIC_SYMBOL : [^_`~¨¯´¶¸–—†‡•Ⅰ-Ⅻ] ;
 fragment MATH_SYMBOL : [%+<=>¬°±µ·×÷‰′″\u0220-\u022F] ; // Excludes math chars that also have general uses, eg. the set [-*/]
 fragment CURRENCY_SYMBOL : [¤$£¥¢] ; // Others will be added later
