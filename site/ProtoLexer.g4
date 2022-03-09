@@ -80,7 +80,7 @@ OPEN_PARAMETER : '@' ;
 // Sentences
 IS_DEFINED_AS : ':' ;
 PLACEHOLDER : '|' ;
-WORD : WORD_CHAR ((WORD_CHAR | DIGIT)+)? ;
+WORD : WORD_CHAR+ ;
 
 // Comment-only characters
 COMMENT_OTHER : COMMENT_PERMITTED_CHAR ;
