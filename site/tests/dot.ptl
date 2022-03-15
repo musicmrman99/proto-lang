@@ -3,6 +3,7 @@
 "hell-5.0"  # Number literal in string                           (should parse the same as {"hello-5.0"})
 hello.world # Dot in sentence fragment                           (should parse the same as {`hello.world`})
 hell5.world # Non-fractional number literal in sentence fragment (should be parsed as {`hell`, 5, `.world`})
+hello.5orld # Non-fractional number literal in sentence fragment (should be parsed as {`hello.`, 5, `orld`})
 hell5.0wrld # Number literal in sentence fragment                (should be parsed as {`hell`, 5.0, `wrld`})
 (5.5 + 1)/2 # Number literals intermixed with sentence fragments (should be parsed as {`(`, 5.5, ` + `, 1, `)/`, 2})
 [5.0]       # Number literal in map                              (should parse the same as `5.0` would outside the map)
