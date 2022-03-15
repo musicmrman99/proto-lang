@@ -41,8 +41,8 @@ string_literal : STRING_LITERAL ;
 logical_literal : LOGICAL_LITERAL ;
 
 map_expression_atom : (
-    expression_atom
-  | association_operator
+    association_operator
+  | expression_atom
 );
 map_literal : OPEN_MAP any_whitespace?
     (map_expression_atom+? (ELEM_DELIM any_whitespace? map_expression_atom+?)*)?
