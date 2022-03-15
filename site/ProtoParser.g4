@@ -60,7 +60,7 @@ parameter : OPEN_PARAMETER parameter_index? parameter_extraction? ;
 // Sentences
 declaration_operator : any_whitespace? IS_DEFINED_AS any_whitespace? ;
 placeholder_operator : PLACEHOLDER ;
-sentence_fragment : WORD | UNRESERVED_WORD | SPACE ;
+sentence_fragment : WORD | UNCOMPOSED_RESERVED_WORD | DECIMAL_POINT | SPACE ;
 
 // Language-aware kinds of whitespace
 newline : (NEWLINE SPACE?)+ ;

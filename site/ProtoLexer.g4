@@ -29,9 +29,10 @@ fragment WORD_CHAR : (
 
 // These allow reserved operator symbols to be used in ordinary sentences.
 // This set of characters must be mutually exclusive with WORD_CHAR, or the lexer will exhibit undesirable behaviour.
-// Includes: associations, decimal point, 'true'/'false'
+// Included in parser: decimal point
+// Includes: associations, 'true'/'false'
 // Excludes: comments, numbers, strings, maps, blocks, parameters, sentence def chars (`:` and `|`)
-fragment RESERVED_CHAR : [\-<>.ft] ;
+fragment UNCOMPOSED_RESERVED_CHAR : [\-<>ft] ;
 
 // Comment-only characters
 fragment COMMENT_PERMITTED_CHAR : [\u2500-\u257F] ; // \u2500-\u257F are the box-drawing characters
@@ -87,11 +88,11 @@ OPEN_PARAMETER : '@' ;
 IS_DEFINED_AS : ':' ;
 PLACEHOLDER : '|' ;
 WORD : WORD_CHAR+ ;
-  // "Unreserved" words are characters that would otherwise be reserved, but
-  // did not match any reserved token, so may be used for custom semantics in
-  // sentences. Care should always be taken when using "unreserved" characters
-  // in Proto code.
-UNRESERVED_WORD : RESERVED_CHAR ;
+  // "uncomposed reserved" characters are reserved when they appear together in a specific
+  // sequence, but these characters did not match any such token, so may be used for custom
+  // semantics in sentences. Care should always be taken when using "uncomposed reserved"
+  // characters in Proto code.
+UNCOMPOSED_RESERVED_WORD : UNCOMPOSED_RESERVED_CHAR ;
 
 // Comment-only characters
 COMMENT_OTHER : COMMENT_PERMITTED_CHAR ;
