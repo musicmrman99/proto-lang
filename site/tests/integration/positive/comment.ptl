@@ -1,0 +1,5 @@
+hello# after
+hello # after
+
+hello#{embedded}#world
+hello #{embedded}# world

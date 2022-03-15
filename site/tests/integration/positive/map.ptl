@@ -1,0 +1,3 @@
+[5.0]       # Number literal in map                              (should parse the same as `5.0` would outside the map)
+["ehll."]   # Dot in string in map                               (should parse the same as `"ehll."` would outside the map)
+[hello.map] # Dot in sentence fragment in map                    (should parse the same as `hello.map` would outside the map)

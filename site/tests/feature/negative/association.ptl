@@ -1,0 +1,8 @@
+# Association out of context
+-->
+{a --> b}
+[{a --> b}]
+
+# Association not associating anything (not an error yet)
+[ --> b]
+[a --> --> b]

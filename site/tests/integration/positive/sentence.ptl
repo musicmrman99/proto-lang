@@ -1,0 +1,32 @@
+hello5world # Non-fractional number literal in sentence fragment (should be parsed as {`hello`, 5, `world`})
+hell567orld # Non-fractional number literal (multi-number) in sentence fragment (should be parsed as {`hello`, 5, `world`})
+
+hello.world # Dot in sentence fragment                           (should parse the same as {`hello.world`})
+hell5.world # Non-fractional number literal in sentence fragment (should be parsed as {`hell`, 5, `.world`})
+hello.5orld # Non-fractional number literal in sentence fragment (should be parsed as {`hello.`, 5, `orld`})
+hell5.0wrld # Number literal in sentence fragment                (should be parsed as {`hell`, 5.0, `wrld`})
+
+(5.5 + 1)/2 # Number literals intermixed with sentence fragments (should be parsed as {`(`, 5.5, ` + `, 1, `)/`, 2})
+
+hello"hello\"\n"world
+hello "hello\"\n" world
+
+hellotrueyes
+hello trueyes
+hellotrue yes
+hello true yes
+
+hellofalseyes
+hello falseyes
+hellofalse yes
+hello false yes
+
+hello[]yes
+hello []yes
+hello[] yes
+hello [] yes
+
+hello{}yes
+hello {}yes
+hello{} yes
+hello {} yes

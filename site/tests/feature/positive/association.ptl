@@ -1,0 +1,32 @@
+# Basic
+[a---b]
+
+# Whitespace (spaces not meaningful before/after any (dis)association)
+[a ---b]
+[a--- b]
+[a --- b]
+[a     ---     b]
+[a
+---b]
+[a---
+b]
+[a
+---
+b]
+    [a
+    ---
+    b]
+
+# Types
+[a --- b]
+[a --> b]
+[a <-- b]
+[a <-> b]
+[a -/- b]
+[a -/> b]
+[a </- b]
+[a </> b]
+
+# Multiple
+[a --> b --> c]
+[a </> b </> c]

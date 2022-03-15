@@ -1,0 +1,5 @@
+hello
+hello : 5
+
+include spaces : sentence with spaces
+goodbye : hello + a * (b - a) / c # range of valid characters (operators should be `sentence_fragment`s)

@@ -1,0 +1,10 @@
+0
+1563
+153.6
+
+"hello\"\n"
+"ehll."     # Dot in string            (should parse as "ehll.")
+"hell-5.0"  # Number literal in string (should parse as "hello-5.0")
+
+true
+false
