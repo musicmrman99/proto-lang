@@ -27,3 +27,5 @@ grun Proto program -gui ../../tests/feature/negative/association.ptl
 grun Proto program -gui ../../tests/integration/positive/comment.ptl
 grun Proto program -gui ../../tests/integration/positive/sentence.ptl
 grun Proto program -gui ../../tests/integration/positive/map.ptl
+
+grun Proto program -gui ../../tests/integration/negative/association.ptl
