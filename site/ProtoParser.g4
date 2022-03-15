@@ -17,7 +17,6 @@ expression_atom : (
   | parameter
 
     // Operators (reorganised in 2nd-phase parse/link)
-  | association_operator
   | declaration_operator
   | placeholder_operator
 
@@ -41,8 +40,12 @@ number_literal : INT_LITERAL (DECIMAL_POINT INT_LITERAL)? ;
 string_literal : STRING_LITERAL ;
 logical_literal : LOGICAL_LITERAL ;
 
+map_expression_atom : (
+    expression_atom
+  | association_operator
+);
 map_literal : OPEN_MAP any_whitespace?
-    (expression_atom+? (ELEM_DELIM any_whitespace? expression_atom+?)*)?
+    (map_expression_atom+? (ELEM_DELIM any_whitespace? map_expression_atom+?)*)?
 any_whitespace? CLOSE_MAP ;
 association_operator : any_whitespace ASSOCIATION any_whitespace ;
 
