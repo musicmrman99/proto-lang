@@ -61,10 +61,5 @@ another sentence]
 
 # Nesting
 [[]]           # map -> map
-[{}]           # map -> block
-[[{}]]         # map -> map -> block
 [[], []]       # map -> multiple map
-[{}, {}]       # map -> multiple block
-[[], {}]       # map -> mixed multiple map/block
 [[[[[[[]]]]]]] # recursively nested maps
-[{[{[{[]}]}]}] # recursively nested maps/blocks (cycling)
