@@ -1,0 +1,9 @@
+# Nesting with block
+{[]}           # block -> map
+{{[]}}         # block -> block -> map
+{[{}, {}]}     # block -> map -> multiple block
+{[{[{[{}]}]}]} # recursively nested blocks/maps (cycling)
+
+{5.0}       # Number literal in block                            (should parse the same as `5.0` would outside the block)
+{"ehll."}   # Dot in string in block                             (should parse the same as `"ehll."` would outside the block)
+{da.block}  # Dot in sentence fragment in block                  (should parse the same as `da.block` would outside the block)

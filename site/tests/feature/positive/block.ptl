@@ -1,0 +1,36 @@
+# Empty block (spaces not meaningful)
+{}
+{ }
+{  }
+{               }
+{
+  
+}
+
+# Prefixing / Suffixing with sentence fragments (spaces are meaningful)
+hello {} goodbye
+hello {
+
+} goodbye
+
+# One item (spaces not meaningful)
+{example}
+{ example}
+{example }
+{ example }
+{
+  example
+}
+
+# One item (spaces not meaningful before/after `{`, `}`, or `,`)
+{example sentence}
+{ example sentence}
+{example sentence }
+{ example sentence }
+{
+  example sentence
+}
+
+# Nesting
+{{}}           # block -> block
+{{{{{{{}}}}}}} # recursively nested blocks

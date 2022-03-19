@@ -1,0 +1,24 @@
+# Plain
+@1
+@2
+@15
+@1.4 # should parse as {{@, 1}, `.`, 5}
+
+# Implicit 1st param
+@
+
+# Extraction
+  # Explicit param number
+@15[]
+@15[5]
+@15["ho ho"]
+@15[string]
+@15["yes" --> string]
+
+  # Implicit 1st param
+@[]
+@[5]
+@[true]
+@["ho ho"]
+@[string]
+@["yes" --> string]

@@ -1,0 +1,9 @@
+# Zero param index - allowed until 2nd phase parser
+@0
+@0[number]
+
+# Negative param indexes
+@-1
+@-15
+@-1[number]
+@-15[number]

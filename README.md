@@ -13,19 +13,27 @@ antlr4 -Dlanguage=Java ProtoLexer.g4 -o test
 antlr4 -Dlanguage=Java ProtoParser.g4 -o test
 javac test/Proto*.java -d test/build
 
-## Test
+## Test Suite
+The test suite is manual. It should be automated at some point.
+
 cd site/test/build
+
 grun Proto program -gui ../../tests/feature/positive/comments.ptl
 grun Proto program -gui ../../tests/feature/positive/primitives.ptl
 grun Proto program -gui ../../tests/feature/positive/sentence.ptl
 grun Proto program -gui ../../tests/feature/positive/map.ptl
 grun Proto program -gui ../../tests/feature/positive/association.ptl
+grun Proto program -gui ../../tests/feature/positive/block.ptl
+grun Proto program -gui ../../tests/feature/positive/parameter.ptl
 
 grun Proto program -gui ../../tests/feature/negative/map.ptl
 grun Proto program -gui ../../tests/feature/negative/association.ptl
+grun Proto program -gui ../../tests/feature/negative/parameter.ptl
 
 grun Proto program -gui ../../tests/integration/positive/comment.ptl
 grun Proto program -gui ../../tests/integration/positive/sentence.ptl
 grun Proto program -gui ../../tests/integration/positive/map.ptl
+grun Proto program -gui ../../tests/integration/positive/block.ptl
+grun Proto program -gui ../../tests/integration/positive/parameter.ptl
 
 grun Proto program -gui ../../tests/integration/negative/association.ptl

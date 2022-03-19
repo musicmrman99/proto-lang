@@ -1,0 +1,8 @@
+# Embedding
+not.an@email.address
+withan@1param
+
+# Doesn't consume whitespace
+withan @1param
+withan@1 param
+withan @1 param

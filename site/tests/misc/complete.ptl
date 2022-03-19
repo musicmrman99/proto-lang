@@ -1,0 +1,34 @@
+# Simple Practical example
+politely say | : {
+  greeting : mutable extract ["milord"] from @2["greeting" --> string]
+  if greeting is [] then
+    say combination of [@1, ", ", greeting]
+  otherwise
+    say "you're being rude"
+}
+
+my greeting : "milord"
+politely say "not a chance" ["greeting" --> my greeting]
+
+
+# More random integration testing
+hello {
+  hello : oh yes
+  this is a [
+    map example,
+    I think it works "yes it does"
+  ]
+  say @1 # hello
+  get @2[hello]
+}
+hello "me"
+
+hello {
+  [
+    [a map can contain a map],
+    yes it can --> 6,
+    {
+      and blocks with | placeholders too : yes
+    }
+  ]
+}
