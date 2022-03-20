@@ -33,7 +33,12 @@ export default class ExecutionSpace extends react.Component {
             <div id="execution-space-main">
               <div className="execution-space-input">
                 <p>Build Config:</p>
-                <textarea id="build-input" value={this.input} onChange={(e) => this.props.setInput(e.target.value)}></textarea>
+                <textarea
+                  id="build-input"
+                  className="codebox"
+                  value={this.input}
+                  onChange={(e) => this.props.setInput(e.target.value)}
+                ></textarea>
               </div>
 
               <div className="execution-space-actions">
@@ -42,7 +47,7 @@ export default class ExecutionSpace extends react.Component {
 
               <div className="execution-space-output">
                 <p>Build Log:</p>
-                <div id="build-output"></div>
+                <div id="build-output" className="codebox"></div>
               </div>
             </div>
           </Tab>
@@ -51,7 +56,12 @@ export default class ExecutionSpace extends react.Component {
             <div id="execution-space-main">
               <div className="execution-space-input">
                 <p>Program Input:</p>
-                <textarea id="run-input" value={this.input} onChange={(e) => this.props.setInput(e.target.value)}></textarea>
+                <textarea
+                  id="run-input"
+                  className="codebox"
+                  value={this.input}
+                  onChange={(e) => this.props.setInput(e.target.value)}
+                ></textarea>
               </div>
 
               <div className="execution-space-actions">
@@ -60,7 +70,7 @@ export default class ExecutionSpace extends react.Component {
 
               <div className="execution-space-output">
                 <p>Program Output:</p>
-                <div id="run-output"></div>
+                <div id="run-output" className="codebox"></div>
               </div>
             </div>
           </Tab>

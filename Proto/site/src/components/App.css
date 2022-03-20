@@ -1,3 +1,8 @@
+/* External Resources
+-------------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro&family=Source+Sans+Pro&display=swap');
+
 /* Top-Level Rules
 -------------------------------------------------- */
 
@@ -54,6 +59,9 @@ input, textarea, button {
 textarea {
     padding: 10px;
     resize: none;
+}
+.codebox {
+    font-family: 'Source Code Pro', monospace;
 }
 
 button {

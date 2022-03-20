@@ -11,6 +11,7 @@ export default class LanguageSpace extends react.Component {
         </div>
         <textarea
           id="language-space-input"
+          className="codebox"
           value={this.props.protoInput}
           onChange={(e) => this.props.onProtoInputChange(e.target.value)}
         ></textarea>
