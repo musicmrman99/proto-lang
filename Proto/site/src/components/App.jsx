@@ -5,11 +5,19 @@ import LanguageSpace from './LanguageSpace';
 import ExecutionSpace from './ExecutionSpace';
 
 export default class App extends react.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      protoInput: ""
+    };
+  }
+
   render() {
     return (
       <div className="app">
-        <LanguageSpace />
-        <ExecutionSpace />
+        <LanguageSpace protoInput={this.state.protoInput} onProtoInputChange={(protoInput) => this.setState({protoInput: protoInput})} />
+        <ExecutionSpace protoInput={this.state.protoInput} />
       </div>
     );
   }

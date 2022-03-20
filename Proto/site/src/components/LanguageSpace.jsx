@@ -9,7 +9,11 @@ export default class LanguageSpace extends react.Component {
           <h2>Language Space</h2>
           <p>Input your proto source code here ...</p>
         </div>
-        <textarea id="language-space-input"></textarea>
+        <textarea
+          id="language-space-input"
+          value={this.props.protoInput}
+          onChange={(e) => this.props.onProtoInputChange(e.target.value)}
+        ></textarea>
       </div>
     );
   }
