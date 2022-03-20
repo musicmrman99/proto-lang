@@ -1,0 +1,14 @@
+.language-space {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+}
+
+.language-space-header {
+    padding: 10px;
+}
+
+.language-space-input {
+    flex-grow: 1;
+}
