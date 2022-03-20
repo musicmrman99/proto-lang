@@ -15,8 +15,8 @@ This is how to build the parser for the execution environment:
 In Bash:
 ```bash
 cd Proto
-antlr4 -Dlanguage=JavaScript ProtoLexer.g4 -o site/src/build/generated
-antlr4 -Dlanguage=JavaScript ProtoParser.g4 -o site/src/build/generated
+antlr4 -Dlanguage=JavaScript ProtoLexer.g4 -o site/src/build
+antlr4 -Dlanguage=JavaScript ProtoParser.g4 -o site/src/build
 ```
 
 ## Test Suite
