@@ -7,33 +7,57 @@ Hence the name.
 ## Notes on Environment
 This project followed much of the advice/ideas in [The ANTLR Mega-Tutorial](https://tomassetti.me/antlr-mega-tutorial/) by Gabriele Tomassetti. That includes ANTLR setup and some shell aliases that are used below for build and test - see the tutorial for details.
 
-## Build
-cd site
-antlr4 -Dlanguage=Java ProtoLexer.g4 -o test
-antlr4 -Dlanguage=Java ProtoParser.g4 -o test
-javac test/Proto*.java -d test/build
+## Web Execution Environment
+
+### Building
+This is how to build the parser for the execution environment:
+
+In Bash:
+```bash
+cd Proto
+antlr4 -Dlanguage=JavaScript ProtoLexer.g4 -o site/src/build/generated
+antlr4 -Dlanguage=JavaScript ProtoParser.g4 -o site/src/build/generated
+```
 
 ## Test Suite
-The test suite is manual. It should be automated at some point.
 
-cd site/test/build
+### Building
+This is how to build the parser for the test suite:
 
-grun Proto program -gui ../../tests/feature/positive/comments.ptl
-grun Proto program -gui ../../tests/feature/positive/primitives.ptl
-grun Proto program -gui ../../tests/feature/positive/sentence.ptl
-grun Proto program -gui ../../tests/feature/positive/map.ptl
-grun Proto program -gui ../../tests/feature/positive/association.ptl
-grun Proto program -gui ../../tests/feature/positive/block.ptl
-grun Proto program -gui ../../tests/feature/positive/parameter.ptl
+In Bash:
+```bash
+cd Proto
+antlr4 -Dlanguage=Java ProtoLexer.g4 -o tests/build/generated
+antlr4 -Dlanguage=Java ProtoParser.g4 -o tests/build/generated
+javac tests/build/generated/Proto*.java -d tests/build
+```
 
-grun Proto program -gui ../../tests/feature/negative/map.ptl
-grun Proto program -gui ../../tests/feature/negative/association.ptl
-grun Proto program -gui ../../tests/feature/negative/parameter.ptl
+### Running
+The test suite is manual - each of these commands should be run in turn and its output checked for correctness.
 
-grun Proto program -gui ../../tests/integration/positive/comment.ptl
-grun Proto program -gui ../../tests/integration/positive/sentence.ptl
-grun Proto program -gui ../../tests/integration/positive/map.ptl
-grun Proto program -gui ../../tests/integration/positive/block.ptl
-grun Proto program -gui ../../tests/integration/positive/parameter.ptl
+**Note**: This should be automated at some point. 
 
-grun Proto program -gui ../../tests/integration/negative/association.ptl
+In CMD:
+```batch
+cd Proto/tests/build
+
+grun Proto program -gui ../feature/positive/comment.ptl
+grun Proto program -gui ../tests/feature/positive/primitive.ptl
+grun Proto program -gui ../tests/feature/positive/sentence.ptl
+grun Proto program -gui ../tests/feature/positive/map.ptl
+grun Proto program -gui ../tests/feature/positive/association.ptl
+grun Proto program -gui ../tests/feature/positive/block.ptl
+grun Proto program -gui ../tests/feature/positive/parameter.ptl
+
+grun Proto program -gui ../tests/feature/negative/map.ptl
+grun Proto program -gui ../tests/feature/negative/association.ptl
+grun Proto program -gui ../tests/feature/negative/parameter.ptl
+
+grun Proto program -gui ../tests/integration/positive/comment.ptl
+grun Proto program -gui ../tests/integration/positive/sentence.ptl
+grun Proto program -gui ../tests/integration/positive/map.ptl
+grun Proto program -gui ../tests/integration/positive/block.ptl
+grun Proto program -gui ../tests/integration/positive/parameter.ptl
+
+grun Proto program -gui ../tests/integration/negative/association.ptl
+```

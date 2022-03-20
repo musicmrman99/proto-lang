@@ -1,7 +1,8 @@
 .vscode
-node_modules
 .antlr
 
 \#Todo
+\#Archive
 
-site/test
+Proto/tests/build
+Proto/site/src/lang/build
