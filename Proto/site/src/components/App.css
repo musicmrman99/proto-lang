@@ -4,6 +4,9 @@
 :root {
     --background: rgb(32,32,36);
     --background-light: rgb(48,48,54);
+
+    --layout-horiz-space: 20px;
+    --layout-vert-space: 10px;
 }
 
 /* Top-Level Rules
@@ -15,14 +18,12 @@ html, body, .app {
 }
 
 .app {
-    display: grid;
     width: 100vw;
     height: 100vh;
-    grid-template:
-        "language input" 1fr
-        "language actions" auto
-        "language output" 1fr
-        / 1fr 1fr;
+    
+    display: flex;
+    flex-direction: row;
+    gap: var(--layout-horiz-space);
 
     background-color: var(--background);
 }
