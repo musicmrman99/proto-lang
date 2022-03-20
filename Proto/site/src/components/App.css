@@ -2,11 +2,12 @@
 -------------------------------------------------- */
 
 :root {
-    --background: rgb(32,32,36);
     --background-light: rgb(48,48,54);
+    --background: rgb(32,32,36);
+    --background-dark: rgb(24,24,27);
+    --background-very-dark: rgb(16,16,18);
 
-    --layout-horiz-space: 20px;
-    --layout-vert-space: 10px;
+    --layout-space: 20px;
 }
 
 /* Top-Level Rules
@@ -20,10 +21,11 @@ html, body, .app {
 .app {
     width: 100vw;
     height: 100vh;
+    padding: var(--layout-space);
     
     display: flex;
     flex-direction: row;
-    gap: var(--layout-horiz-space);
+    gap: var(--layout-space);
 
     background-color: var(--background);
 }
@@ -35,17 +37,28 @@ html, body, .app {
     box-sizing: border-box;
 }
 
-h1, h2, h3, h4, h5, h6, p, span, input, textarea, button {
+h1, h2, h3, h4, h5, h6, p, span, li, th, td, legend, label, input, textarea, button {
     margin: 0;
     color: white;
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 0.9em;
 }
+h1 { font-size: 2em; }
+h2 { font-size: 1.5em; }
+h3 { font-size: 1.2em; }
 
 input, textarea, button {
     border: none;
     background-color: var(--background-light);
 }
-
 textarea {
     padding: 10px;
     resize: none;
 }
+
+button {
+    padding: 10px;
+    border-radius: 5px;
+}
+button:hover { background-color: var(--background-dark); }
+button:active { background-color: var(--background-very-dark); }

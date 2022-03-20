@@ -4,7 +4,7 @@
 
     display: flex;
     flex-direction: column;
-    gap: var(--layout-vert-space);
+    gap: var(--layout-space);
 }
 
 #language-space-header {

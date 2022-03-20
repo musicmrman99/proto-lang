@@ -4,7 +4,7 @@
 
     display: flex;
     flex-direction: column;
-    gap: var(--layout-vert-space);
+    gap: var(--layout-space);
 }
 
 #execution-space-header {
@@ -16,11 +16,26 @@
     flex-grow: 1;
 }
 
-/*
 #execution-space-actions {
-    height: auto;
+    display: flex;
+    flex-direction: row;
+    gap: var(--layout-space);
 }
-*/
+#execution-space-actions > * {
+    flex-grow: 1;
+}
+
+#run-action { background-color: rgb(0,128,0); }
+#run-action:hover { background-color: rgb(0,96,0); }
+#run-action:active { background-color: rgb(0,88,0); }
+
+#build-action { background-color: rgb(128,0,0); }
+#build-action:hover { background-color: rgb(96,0,0); }
+#build-action:active { background-color: rgb(88,0,0); }
+
+#configure-action { background-color: rgb(0,0,128); }
+#configure-action:hover { background-color: rgb(0,0,96); }
+#configure-action:active { background-color: rgb(0,0,88); }
 
 #execution-space-output {
     flex-grow: 1;
