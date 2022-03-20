@@ -11,6 +11,9 @@
     display: flex;
     flex-direction: row;
     gap: var(--layout-space);
+
+    padding-bottom: calc(var(--layout-space) / 2);
+    border-bottom: 2px solid var(--background-very-dark);
 }
 .tabs-header > * {
     flex-grow: 1;
