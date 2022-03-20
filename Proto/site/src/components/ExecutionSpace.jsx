@@ -31,29 +31,37 @@ export default class ExecutionSpace extends react.Component {
         <Tabs swapOn="hover">
           <Tab tabid="build" name="Build">
             <div id="execution-space-main">
-              <p>Build Config:</p>
-              <textarea id="execution-space-input" value={this.input} onChange={(e) => this.props.setInput(e.target.value)}></textarea>
+              <div className="execution-space-input">
+                <p>Build Config:</p>
+                <textarea id="build-input" value={this.input} onChange={(e) => this.props.setInput(e.target.value)}></textarea>
+              </div>
 
-              <div id="execution-space-actions">
+              <div className="execution-space-actions">
                 <button id="build-action" onClick={this.build}>Build</button>
               </div>
 
-              <p>Build Log:</p>
-              <div id="execution-space-output"></div>
+              <div className="execution-space-output">
+                <p>Build Log:</p>
+                <div id="build-output"></div>
+              </div>
             </div>
           </Tab>
 
           <Tab tabid="run" name="Run">
             <div id="execution-space-main">
-              <p>Program Input:</p>
-              <textarea id="execution-space-input" value={this.input} onChange={(e) => this.props.setInput(e.target.value)}></textarea>
+              <div className="execution-space-input">
+                <p>Program Input:</p>
+                <textarea id="run-input" value={this.input} onChange={(e) => this.props.setInput(e.target.value)}></textarea>
+              </div>
 
-              <div id="execution-space-actions">
+              <div className="execution-space-actions">
                 <button id="run-action" onClick={this.run}>Run</button>
               </div>
 
-              <p>Program Output:</p>
-              <div id="execution-space-output"></div>
+              <div className="execution-space-output">
+                <p>Program Output:</p>
+                <div id="run-output"></div>
+              </div>
             </div>
           </Tab>
         </Tabs>
