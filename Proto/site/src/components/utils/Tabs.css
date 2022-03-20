@@ -1,0 +1,21 @@
+.tabs {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--layout-space);
+}
+
+.tabs-header {
+    display: flex;
+    flex-direction: row;
+    gap: var(--layout-space);
+}
+.tabs-header > * {
+    flex-grow: 1;
+}
+
+.tab-content {
+    flex-grow: 1;
+}
