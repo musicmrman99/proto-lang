@@ -1,11 +1,20 @@
 import react from "react";
 import './ExecutionSpace.css'
 
+import jsonschema from 'json-schema';
+
 import { Tabs, Tab } from "./utils/Tabs";
 
 export default class ExecutionSpace extends react.Component {
   constructor(props) {
     super(props);
+    
+    this.configSchema = {
+      type: "object",
+      properties: {},
+      additionalProperties: false
+    }
+
     this.state = {
       // Build I/O
       buildConfigStr: "{}",
@@ -83,14 +92,20 @@ export default class ExecutionSpace extends react.Component {
   }
 
   setConfig = (configStr) => {
-    let rawConfig = null;
+    // Parse JSON
+    let config = null;
     try {
-      rawConfig = JSON.parse(configStr);
+      config = JSON.parse(configStr);
     } catch (e) {
       if (!(e instanceof SyntaxError)) throw e; // If it's not a syntax error, re-throw
     }
 
-    this.setState({buildConfigStr: configStr, buildConfig: rawConfig});
+    // Validate JSON;
+    let result = jsonschema.validate(config, this.configSchema);
+    if (!result.valid) config = null;
+
+    // Set State
+    this.setState({buildConfigStr: configStr, buildConfig: config});
   }
 
   setProgramInput = (programInput) => {
