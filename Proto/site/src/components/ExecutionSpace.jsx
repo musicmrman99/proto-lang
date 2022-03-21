@@ -69,7 +69,7 @@ export default class ExecutionSpace extends react.Component {
               <div className="execution-space-output">
                 <p>Build Log:</p>
                 <div id="build-output" className={"codebox " + (this.state.buildLog.success ? "valid" : "invalid")}>
-                  {this.state.buildLog.output}
+                  {this.state.buildLog.output.map((message, i) => react.cloneElement(message, {key: i}))}
                 </div>
               </div>
             </div>
@@ -124,35 +124,39 @@ export default class ExecutionSpace extends react.Component {
   }
 
   build = () => {
+    // Create the logging object
     const log = {
       success: true,
       output: []
     };
 
-    // Configuration error
+    // Check for configuration errors
     if (this.state.buildConfig == null) {
       log.success = false;
       log.output.push(<Message type="error">Build Configuration is invalid - please correct it, then try building again.</Message>);
     }
 
-    // Build
-    let ast = null;
+    // Run lexer / 1st phase parser
+    let tree = null;
     if (log.success) {
-      // Run lexer / 1st phase parser
       const chars = new InputStream(this.props.protoInput, true);
       const lexer = new ProtoLexer(chars);
       const tokens  = new CommonTokenStream(lexer);
       const parser = new ProtoParser(tokens);
       parser.removeErrorListeners();
       parser.addErrorListener(new ProtoErrorListener(this.state.buildConfig, log));
-      const tree = parser.program();
+      tree = parser.program();
+    }
 
-      // Run 2nd phase parser / linker
+    // Run 2nd phase parser / linker
+    let ast = null;
+    if (log.success) {
       ast = {program: {}};
       const protoLang = new ProtoListener(this.state.buildConfig, ast, log);
       antlr4.tree.ParseTreeWalker.DEFAULT.walk(protoLang, tree);
     }
 
+    // Output success/failure and update state
     if (log.success) {
       log.output.push(<Message type="success">Ready to Run</Message>);
     } else {
