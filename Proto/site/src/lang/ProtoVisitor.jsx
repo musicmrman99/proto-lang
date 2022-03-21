@@ -1,8 +1,9 @@
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
-export const Token = Object.freeze({
+export const Type = Object.freeze({
     HARD_BREAK: Symbol("hard-break"),
-    SOFT_BREAK: Symbol("soft-break")
+    SOFT_BREAK: Symbol("soft-break"),
+    PARAMETER: Symbol("parameter")
 });
 
 // This class defines a complete visitor for a parse tree produced by ProtoParser.
@@ -25,10 +26,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 	visitProgram = (ctx) =>
         this.visitChildren(ctx)           // Expressions -> their values / representations
         .filter((child) => child != null) // Remove EOF and other null/undefined values
-        .concat(Token.HARD_BREAK);        // Translate EOF -> HARD_BREAK
+        .concat({type: Type.HARD_BREAK}); // Translate EOF -> HARD_BREAK
 
     // Translate important whitespace to SOFT_BREAKs
-    visitNewline = () => Token.SOFT_BREAK;
+    visitNewline = () => ({type: Type.SOFT_BREAK});
 
     // Bypass expression_atom tokens
     visitExpression_atom = (ctx) => this.visitChildren(ctx)[0];
@@ -37,7 +38,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 	visitComment = () => null;
 	visitAny_whitespace = () => null;
 
-	// Translate basic values into their JS equivalents
+	// Translate basic literals into their JS equivalents
 	visitNumber_literal = (ctx) => {
         const [whole, frac] = ctx.INT_LITERAL();
         const point = ctx.DECIMAL_POINT();
@@ -50,13 +51,23 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 	visitString_literal = (ctx) => ctx.STRING_LITERAL().getText();
 	visitLogical_literal = (ctx) => ctx.LOGICAL_LITERAL().getText() === "true";
 
+    // Like basic literals, parameters can appear anywhere
+    visitParameter = (ctx) => {
+        const index = ctx.parameter_index();
+        const extraction = ctx.parameter_extraction();
+        return {
+            type: Type.PARAMETER,
+            index: index != null ? parseInt(index.getText()) : 1,
+            extraction: extraction != null ? this.visitMap_literal(extraction) : []
+        };
+    }
+
     /*
     Remaining:
 
   | map_literal
       association_operator (map only)
   | block_literal
-  | parameter
 
   | declaration_operator
   | placeholder_operator
