@@ -108,9 +108,9 @@ export default class ExecutionSpace extends react.Component {
     }
 
     // Build
-    this.setState({buildLog: [
-      <span className="build-success">BUILD SUCCESSFUL</span>
-    ]});
+    const log = [];
+    log.push(<span className="build-success">BUILD SUCCESSFUL</span>);
+    this.setState({buildLog: log});
   }
 
   run = () => {

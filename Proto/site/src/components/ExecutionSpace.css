@@ -43,6 +43,7 @@
 /* They are divs, not an input boxes, so needs styling. */
 #build-output, #run-output {
     background-color: var(--background-light);
+    overflow: scroll;
 }
 
 /* Style the action buttons - horizontal flexbox */
