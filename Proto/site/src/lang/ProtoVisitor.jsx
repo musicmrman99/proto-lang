@@ -23,13 +23,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         this.log = log;
     }
 
-    // Remove null/undefined
-	visitProgram = (ctx) =>
-        this.visitChildren(ctx)           // Expressions -> their values / representations
-        .filter((child) => child != null) // Remove EOF and dropped nodes
-
-    // Translate newline -> SOFT_TERMINATOR
-    visitNewline = () => ({type: Type.SOFT_TERMINATOR});
+    /* Dropped and Bypassed Nodes
+    -------------------- */
 
     // Discard comments and unimportant whitespace
 	visitComment = () => null;
@@ -38,6 +33,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     // Bypass expression_atom and map_expression_atom nodes
     visitExpression_atom = (ctx) => this.visitChildren(ctx)[0];
     visitMap_expression_atom = (ctx) => this.visitChildren(ctx)[0];
+
+    /* Basic Literals
+    -------------------- */
 
 	// Translate basic literals into their JS equivalents
 	visitNumber_literal = (ctx) => {
@@ -64,6 +62,17 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         };
     }
 
+    /* Sentence Parsing Contexts
+    -------------------- */
+
+    // Translate newline -> SOFT_TERMINATOR
+    visitNewline = () => ({type: Type.SOFT_TERMINATOR});
+
+    // Program
+	visitProgram = (ctx) =>
+        this.visitChildren(ctx)           // Expressions -> their values / representations
+        .filter((child) => child != null) // Remove EOF and dropped nodes
+
     // Compound literals
     visitMap_literal = (ctx) => ({
         type: Type.MAP,
@@ -83,9 +92,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     Remaining:
 
   | map_literal
-      association_operator (map only)
   | block_literal
 
+    association_operator (map only)
   | declaration_operator
   | placeholder_operator
 
