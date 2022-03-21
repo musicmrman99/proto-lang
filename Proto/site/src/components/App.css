@@ -79,5 +79,6 @@ button {
 button:hover { background-color: var(--background-dark); }
 button:active { background-color: var(--background-very-dark); }
 
+.awaiting { border: 1px dashed var(--info) }
 .valid { border: 1px dashed var(--success) }
 .invalid { border: 1px dashed var(--failure) }

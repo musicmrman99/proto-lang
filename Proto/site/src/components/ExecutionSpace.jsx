@@ -68,7 +68,13 @@ export default class ExecutionSpace extends react.Component {
 
               <div className="execution-space-output">
                 <p>Build Log:</p>
-                <div id="build-output" className={"codebox " + (this.state.buildLog.success ? "valid" : "invalid")}>
+                <div id="build-output" className={
+                    "codebox " + {
+                      [null]: "awaiting",
+                      [true]: "valid",
+                      [false]: "invalid"
+                    }[this.state.buildLog.success]
+                  }>
                   {this.state.buildLog.output.map((message, i) => react.cloneElement(message, {key: i}))}
                 </div>
               </div>
