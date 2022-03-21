@@ -8,11 +8,12 @@ export default class ExecutionSpace extends react.Component {
     super(props);
     this.state = {
       // Build I/O
-      buildConfig: {},
+      buildConfigStr: "{}",
+      buildConfig: {}, // null = invalid config
       buildLog: [],
 
       // Build result
-      ast: null,
+      ast: null, // null = not yet built
 
       // Run I/O
       programInput: "",
@@ -35,9 +36,9 @@ export default class ExecutionSpace extends react.Component {
                 <p>Build Config:</p>
                 <textarea
                   id="build-input"
-                  className="codebox"
-                  value={this.input}
-                  onChange={(e) => this.props.setInput(e.target.value)}
+                  className={"codebox " + (this.state.buildConfig != null ? "valid" : "invalid")}
+                  value={this.state.buildConfigStr}
+                  onChange={(e) => this.setConfig(e.target.value)}
                 ></textarea>
               </div>
 
@@ -47,7 +48,9 @@ export default class ExecutionSpace extends react.Component {
 
               <div className="execution-space-output">
                 <p>Build Log:</p>
-                <div id="build-output" className="codebox"></div>
+                <div id="build-output" className="codebox">
+                  {this.state.buildLog.map((entry) => (<p>{entry}</p>))}
+                </div>
               </div>
             </div>
           </Tab>
@@ -59,8 +62,8 @@ export default class ExecutionSpace extends react.Component {
                 <textarea
                   id="run-input"
                   className="codebox"
-                  value={this.input}
-                  onChange={(e) => this.props.setInput(e.target.value)}
+                  value={this.state.programInput}
+                  onChange={(e) => this.setProgramInput(e.target.value)}
                 ></textarea>
               </div>
 
@@ -79,15 +82,38 @@ export default class ExecutionSpace extends react.Component {
     );
   }
 
-  configure() {
-    //
+  setConfig = (configStr) => {
+    let rawConfig = null;
+    try {
+      rawConfig = JSON.parse(configStr);
+    } catch (e) {
+      if (!(e instanceof SyntaxError)) throw e; // If it's not a syntax error, re-throw
+    }
+
+    this.setState({buildConfigStr: configStr, buildConfig: rawConfig});
   }
 
-  build() {
-    //
+  setProgramInput = (programInput) => {
+    this.setState({programInput: programInput});
   }
 
-  run() {
+  build = () => {
+    // Configuration error
+    if (this.state.buildConfig == null) {
+      this.setState({buildLog: [
+        <span className="build-error">BUILD FAILED</span>,
+        <span><span className="build-error">ERROR:</span> Configuration is invalid - please correct it, then try building again.</span>
+      ]});
+      return;
+    }
+
+    // Build
+    this.setState({buildLog: [
+      <span className="build-success">BUILD SUCCESSFUL</span>
+    ]});
+  }
+
+  run = () => {
     //
   }
 }

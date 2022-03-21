@@ -33,6 +33,13 @@
     text-align: center;
 }
 
+#build-input,
+#build-output,
+#run-input,
+#run-output {
+    padding: 10px;
+}
+
 /* They are divs, not an input boxes, so needs styling. */
 #build-output, #run-output {
     background-color: var(--background-light);
@@ -57,3 +64,9 @@
 #build-action { background-color: rgb(128,0,0); }
 #build-action:hover { background-color: rgb(96,0,0); }
 #build-action:active { background-color: rgb(88,0,0); }
+
+/* Classes used by the build output
+-------------------------------------------------- */
+
+.build-error { color: var(--invalid) }
+.build-success { color: var(--valid) }

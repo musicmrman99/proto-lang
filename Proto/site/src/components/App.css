@@ -12,6 +12,9 @@
     --background-dark: rgb(24,24,27);
     --background-very-dark: rgb(16,16,18);
 
+    --valid: rgb(48,208,48);
+    --invalid: rgb(208,48,48);
+
     --layout-space: 20px;
 }
 
@@ -42,7 +45,7 @@ html, body, .app {
     box-sizing: border-box;
 }
 
-h1, h2, h3, h4, h5, h6, p, span, li, th, td, legend, label, input, textarea, button {
+h1, h2, h3, h4, h5, h6, p, li, th, td, legend, label, input, textarea, button {
     margin: 0;
     color: white;
     font-family: 'Source Sans Pro', sans-serif;
@@ -55,6 +58,9 @@ h3 { font-size: 1.2em; }
 input, textarea, button {
     border: none;
     background-color: var(--background-light);
+}
+input:focus, textarea:focus, button:focus {
+    outline: none;
 }
 textarea {
     padding: 10px;
@@ -70,3 +76,6 @@ button {
 }
 button:hover { background-color: var(--background-dark); }
 button:active { background-color: var(--background-very-dark); }
+
+.valid { border: 1px dashed var(--valid) }
+.invalid { border: 1px dashed var(--invalid) }
