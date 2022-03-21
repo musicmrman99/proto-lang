@@ -12,8 +12,10 @@
     --background-dark: rgb(24,24,27);
     --background-very-dark: rgb(16,16,18);
 
-    --valid: rgb(48,208,48);
-    --invalid: rgb(208,48,48);
+    --success: rgb(48,208,48);
+    --failure: rgb(208,48,48);
+    --warning: rgb(208,208,48);
+    --info: rgb(208,208,202);
 
     --layout-space: 20px;
 }
@@ -77,5 +79,5 @@ button {
 button:hover { background-color: var(--background-dark); }
 button:active { background-color: var(--background-very-dark); }
 
-.valid { border: 1px dashed var(--valid) }
-.invalid { border: 1px dashed var(--invalid) }
+.valid { border: 1px dashed var(--success) }
+.invalid { border: 1px dashed var(--failure) }

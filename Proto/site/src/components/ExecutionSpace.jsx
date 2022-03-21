@@ -4,6 +4,14 @@ import './ExecutionSpace.css'
 import jsonschema from 'json-schema';
 
 import { Tabs, Tab } from "./utils/Tabs";
+import Message from "./utils/Message";
+
+import antlr4 from 'antlr4';
+import ProtoLexer from '../lang/build/ProtoLexer.js';
+import ProtoParser from '../lang/build/ProtoParser.js';
+import ProtoListener from '../lang/ProtoListener';           // Custom
+import ProtoErrorListener from "../lang/ProtoErrorListener"; // Custom
+const { CommonTokenStream, InputStream } = antlr4;
 
 export default class ExecutionSpace extends react.Component {
   constructor(props) {
@@ -16,13 +24,16 @@ export default class ExecutionSpace extends react.Component {
     }
 
     this.state = {
-      // Build I/O
+      // Build Config
       buildConfigStr: "{}",
       buildConfig: {}, // null = invalid config
-      buildLog: [],
 
-      // Build result
-      ast: null, // null = not yet built
+      // Build Output
+      buildLog: {
+        success: null,
+        output: []
+      },
+      ast: null, // null = not yet built, OR failed to build
 
       // Run I/O
       programInput: "",
@@ -57,8 +68,8 @@ export default class ExecutionSpace extends react.Component {
 
               <div className="execution-space-output">
                 <p>Build Log:</p>
-                <div id="build-output" className="codebox">
-                  {this.state.buildLog.map((entry) => (<p>{entry}</p>))}
+                <div id="build-output" className={"codebox " + (this.state.buildLog.success ? "valid" : "invalid")}>
+                  {this.state.buildLog.output}
                 </div>
               </div>
             </div>
@@ -113,19 +124,41 @@ export default class ExecutionSpace extends react.Component {
   }
 
   build = () => {
+    const log = {
+      success: true,
+      output: []
+    };
+
     // Configuration error
     if (this.state.buildConfig == null) {
-      this.setState({buildLog: [
-        <span className="build-error">BUILD FAILED</span>,
-        <span><span className="build-error">ERROR:</span> Configuration is invalid - please correct it, then try building again.</span>
-      ]});
-      return;
+      log.success = false;
+      log.output.push(<Message type="error">Build Configuration is invalid - please correct it, then try building again.</Message>);
     }
 
     // Build
-    const log = [];
-    log.push(<span className="build-success">BUILD SUCCESSFUL</span>);
-    this.setState({buildLog: log});
+    let ast = null;
+    if (log.success) {
+      // Run lexer / 1st phase parser
+      const chars = new InputStream(this.props.protoInput, true);
+      const lexer = new ProtoLexer(chars);
+      const tokens  = new CommonTokenStream(lexer);
+      const parser = new ProtoParser(tokens);
+      parser.removeErrorListeners();
+      parser.addErrorListener(new ProtoErrorListener(this.state.buildConfig, log));
+      const tree = parser.program();
+
+      // Run 2nd phase parser / linker
+      ast = {program: {}};
+      const protoLang = new ProtoListener(this.state.buildConfig, ast, log);
+      antlr4.tree.ParseTreeWalker.DEFAULT.walk(protoLang, tree);
+    }
+
+    if (log.success) {
+      log.output.push(<Message type="success">Ready to Run</Message>);
+    } else {
+      log.output.push(<Message type="error">Errors Found (see above)</Message>);
+    }
+    this.setState({ast: ast, buildLog: log});
   }
 
   run = () => {

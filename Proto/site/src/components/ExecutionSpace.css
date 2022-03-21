@@ -65,9 +65,3 @@
 #build-action { background-color: rgb(128,0,0); }
 #build-action:hover { background-color: rgb(96,0,0); }
 #build-action:active { background-color: rgb(88,0,0); }
-
-/* Classes used by the build output
--------------------------------------------------- */
-
-.build-error { color: var(--invalid) }
-.build-success { color: var(--valid) }
