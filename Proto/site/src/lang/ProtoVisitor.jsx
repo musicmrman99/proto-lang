@@ -1,5 +1,10 @@
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
+export const Token = Object.freeze({
+    HARD_BREAK: Symbol("hard-break"),
+    SOFT_BREAK: Symbol("soft-break")
+});
+
 // This class defines a complete visitor for a parse tree produced by ProtoParser.
 export default class ProtoVisitor extends ProtoParserVisitor {
     /**
@@ -16,8 +21,14 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         this.log = log;
     }
 
-    // Remove null and undefined values from the top level of the program
-	visitProgram = (ctx) => this.visitChildren(ctx).filter((child) => child != null);
+    // Remove null/undefined, and translate EOF to a HARD_BREAK
+	visitProgram = (ctx) =>
+        this.visitChildren(ctx)           // Expressions -> their values / representations
+        .filter((child) => child != null) // Remove EOF and other null/undefined values
+        .concat(Token.HARD_BREAK);        // Translate EOF -> HARD_BREAK
+
+    // Translate important whitespace to SOFT_BREAKs
+    visitNewline = () => Token.SOFT_BREAK;
 
     // Bypass expression_atom tokens
     visitExpression_atom = (ctx) => this.visitChildren(ctx)[0];
@@ -26,7 +37,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 	visitComment = () => null;
 	visitAny_whitespace = () => null;
 
-	// Convert basic values into their JS equivalents
+	// Translate basic values into their JS equivalents
 	visitNumber_literal = (ctx) => {
         const [whole, frac] = ctx.INT_LITERAL();
         const point = ctx.DECIMAL_POINT();
@@ -38,4 +49,18 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     }
 	visitString_literal = (ctx) => ctx.STRING_LITERAL().getText();
 	visitLogical_literal = (ctx) => ctx.LOGICAL_LITERAL().getText() === "true";
+
+    /*
+    Remaining:
+
+  | map_literal
+      association_operator (map only)
+  | block_literal
+  | parameter
+
+  | declaration_operator
+  | placeholder_operator
+
+  | sentence_fragment
+    */
 }
