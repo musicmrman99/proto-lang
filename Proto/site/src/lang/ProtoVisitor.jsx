@@ -1,9 +1,10 @@
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
 export const Type = Object.freeze({
-    HARD_BREAK: Symbol("hard-break"),
-    SOFT_BREAK: Symbol("soft-break"),
-    PARAMETER: Symbol("parameter")
+    SOFT_TERMINATOR: Symbol("soft-terminator"),
+    PARAMETER: Symbol("parameter"),
+    MAP: Symbol("map"),
+    BLOCK: Symbol("block")
 });
 
 // This class defines a complete visitor for a parse tree produced by ProtoParser.
@@ -22,21 +23,21 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         this.log = log;
     }
 
-    // Remove null/undefined, and translate EOF to a HARD_BREAK
+    // Remove null/undefined
 	visitProgram = (ctx) =>
         this.visitChildren(ctx)           // Expressions -> their values / representations
-        .filter((child) => child != null) // Remove EOF and other null/undefined values
-        .concat({type: Type.HARD_BREAK}); // Translate EOF -> HARD_BREAK
+        .filter((child) => child != null) // Remove EOF and dropped nodes
 
-    // Translate important whitespace to SOFT_BREAKs
-    visitNewline = () => ({type: Type.SOFT_BREAK});
-
-    // Bypass expression_atom tokens
-    visitExpression_atom = (ctx) => this.visitChildren(ctx)[0];
+    // Translate newline -> SOFT_TERMINATOR
+    visitNewline = () => ({type: Type.SOFT_TERMINATOR});
 
     // Discard comments and unimportant whitespace
 	visitComment = () => null;
 	visitAny_whitespace = () => null;
+
+    // Bypass expression_atom and map_expression_atom nodes
+    visitExpression_atom = (ctx) => this.visitChildren(ctx)[0];
+    visitMap_expression_atom = (ctx) => this.visitChildren(ctx)[0];
 
 	// Translate basic literals into their JS equivalents
 	visitNumber_literal = (ctx) => {
@@ -51,16 +52,32 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 	visitString_literal = (ctx) => ctx.STRING_LITERAL().getText();
 	visitLogical_literal = (ctx) => ctx.LOGICAL_LITERAL().getText() === "true";
 
-    // Like basic literals, parameters can appear anywhere
+    // Translate parameters into their AST representation
+    // Note: Like basic literals, parameters can appear anywhere
     visitParameter = (ctx) => {
         const index = ctx.parameter_index();
         const extraction = ctx.parameter_extraction();
         return {
             type: Type.PARAMETER,
             index: index != null ? parseInt(index.getText()) : 1,
-            extraction: extraction != null ? this.visitMap_literal(extraction) : []
+            extraction: extraction != null ? this.visitMap_literal(extraction.map_literal()) : []
         };
     }
+
+    // Compound literals
+    visitMap_literal = (ctx) => ({
+        type: Type.MAP,
+        astNodes:
+            this.visitChildren(ctx)           // Expressions -> their values / representations
+            .filter((child) => child != null) // Remove `[`, `]`, and dropped nodes
+    });
+
+    visitBlock_literal = (ctx) => ({
+        type: Type.BLOCK,
+        astNodes:
+            this.visitChildren(ctx)           // Expressions -> their values / representations
+            .filter((child) => child != null) // Remove `{`, `}`, and dropped nodes
+    });
 
     /*
     Remaining:
