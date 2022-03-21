@@ -9,7 +9,7 @@ import Message from "./utils/Message";
 import antlr4 from 'antlr4';
 import ProtoLexer from '../lang/build/ProtoLexer.js';
 import ProtoParser from '../lang/build/ProtoParser.js';
-import ProtoListener from '../lang/ProtoListener';           // Custom
+import ProtoVisitor from '../lang/ProtoVisitor';             // Custom
 import ProtoErrorListener from "../lang/ProtoErrorListener"; // Custom
 const { CommonTokenStream, InputStream } = antlr4;
 
@@ -157,9 +157,8 @@ export default class ExecutionSpace extends react.Component {
     // Run 2nd phase parser / linker
     let ast = null;
     if (log.success) {
-      ast = {program: {}};
-      const protoLang = new ProtoListener(this.state.buildConfig, ast, log);
-      antlr4.tree.ParseTreeWalker.DEFAULT.walk(protoLang, tree);
+      const protoLang = new ProtoVisitor(this.state.buildConfig, log);
+      ast = protoLang.visit(tree);
     }
 
     // Output success/failure and update state
