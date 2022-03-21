@@ -68,24 +68,27 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     // Translate newline -> SOFT_TERMINATOR
     visitNewline = () => ({type: Type.SOFT_TERMINATOR});
 
-    // Program
-	visitProgram = (ctx) =>
-        this.visitChildren(ctx)           // Expressions -> their values / representations
-        .filter((child) => child != null) // Remove EOF and dropped nodes
-
-    // Compound literals
-    visitMap_literal = (ctx) => ({
-        type: Type.MAP,
+    // Program (entry point)
+	visitProgram = (ctx) => ({
+        type: Type.BLOCK,
         astNodes:
             this.visitChildren(ctx)           // Expressions -> their values / representations
-            .filter((child) => child != null) // Remove `[`, `]`, and dropped nodes
+            .filter((child) => child != null) // Remove EOF and dropped nodes
     });
 
+    // Compound literals
     visitBlock_literal = (ctx) => ({
         type: Type.BLOCK,
         astNodes:
             this.visitChildren(ctx)           // Expressions -> their values / representations
             .filter((child) => child != null) // Remove `{`, `}`, and dropped nodes
+    });
+
+    visitMap_literal = (ctx) => ({
+        type: Type.MAP,
+        astNodes:
+            this.visitChildren(ctx)           // Expressions -> their values / representations
+            .filter((child) => child != null) // Remove `[`, `]`, and dropped nodes
     });
 
     /*
