@@ -267,43 +267,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 case AssociationOperatorRepr:
                     hardTerminator = true; // fallthrough
                 case SoftTerminatorRepr:
-                    // check if this is a full sentence.
-
-                    // TEMPORARY - this is way too basic for the real algo
-                    // Convert to the template string
-                    let template = "";
-                    let params = [];
-                    for (const node of sentenceCandidateNodes) {
-                        switch (node.constructor) {
-                            // Sentence fragment
-                            case SentenceFragmentRepr:
-                                template += node.content;
-                                break;
-
-                            // Values (parameters)
-                            case NumberRepr:
-                            case StringRepr:
-                            case LogicalRepr:
-                            case ParameterRepr:
-                            case BlockRepr:
-                            case MapRepr:
-                                template += "|";
-                                params.push(node);
-                                break;
-
-                            // Any other node - ERROR
-                            default:
-                                this.log.success = false;
-                                this.log.output.push(<Message type="error">A sentence cannot include a {child.type.toString()}</Message>);
-                        }
-                    }
-
-                    // Match against the teplate string
-                    let sentence = null;
-                    const def = allDecls[template];
-                    if (def !== undefined) sentence = new SentenceRepr(def, params);
-
-                    // Add/Error as needed
+                    // Check if this is a full sentence.
+                    const sentence = this.terminateSentence(sentenceCandidateNodes, allDecls);
                     if (sentence !== null) {
                         finalChildren.push(sentence);
                     } else if (hardTerminator) {
@@ -330,6 +295,44 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         const decls = Object.assign({}, this.getDeclarations(ctx.parentCtx)); // Add decls of parent namespaces.
         if (ctx.decls != null) Object.assign(decls, ctx.decls);               // Then, if a namespace yourself, add your decls (possibly hiding parent decls).
         return decls;
+    }
+
+    // Terminate the sentence if needed/possible.
+    // TEMPORARY - this is way too basic for the real algo
+    terminateSentence = (sentenceCandidateNodes, allDecls) => {
+        // Convert to the template string
+        let template = "";
+        let params = [];
+        for (const node of sentenceCandidateNodes) {
+            switch (node.constructor) {
+                // Sentence fragment
+                case SentenceFragmentRepr:
+                    template += node.content;
+                    break;
+
+                // Values (parameters)
+                case NumberRepr:
+                case StringRepr:
+                case LogicalRepr:
+                case ParameterRepr:
+                case BlockRepr:
+                case MapRepr:
+                    template += "|";
+                    params.push(node);
+                    break;
+
+                // Any other node - ERROR
+                default:
+                    this.log.success = false;
+                    this.log.output.push(<Message type="error">A sentence cannot include a {child.type.toString()}</Message>);
+            }
+        }
+
+        // Match against the teplate string
+        let sentence = null;
+        const def = allDecls[template];
+        if (def !== undefined) sentence = new SentenceRepr(def, params);
+        return sentence;
     }
 
     /*
