@@ -1,3 +1,4 @@
+import Message from '../components/utils/Message';
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
 const TempType = Object.freeze({
@@ -30,7 +31,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
      * Create an ANTLR visitor for the output of the 1st phase parser.
      * 
      * @param {{}} config The configuration to use.
-     * @param {{success: boolean, log: Array}} log The logger for errors,
+     * @param {{success: boolean, output: Array}} log The logger for errors,
      *   warnings, and other messages.
      */
     constructor(config, log) {
@@ -131,13 +132,33 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     visitBlock_literal = (ctx) => ({ type: Type.BLOCK, children: this.parseSentenceDeclContext(ctx) });
     visitMap_literal = (ctx) => ({ type: Type.MAP, children: this.parseSentenceExprContext(ctx) });
 
+    parseSentenceDeclContext = (ctx) => {
+        ctx.decls = {"hello | b | c | d | e | f": 5}; // TEMPORARY
+        return this.parseSentenceContext(ctx);
+    }
+
+    parseSentenceExprContext = (ctx) => {
+        return this.parseSentenceContext(ctx);
+    }
+
     parseSentenceContext = (ctx) => {
         // Get raw children
         let children = this.visitChildren(ctx) // Expressions -> their values / representations
             .filter((child) => child != null); // Remove EOF, `{`, `}`, `[`, `]`, and dropped nodes
 
-        // Merge SENTENCE_FRAGMENT nodes (they'll be split correctly later), while
-        // passing along other node types.
+        // Merge sentence fragments
+        children = this.mergeSentenceFragments(children);
+
+        // Parse sentences and link
+        children = this.parseSentences(ctx, children);
+
+        // Return transformed children
+        return children;
+    }
+
+    // Merge SENTENCE_FRAGMENT nodes (they'll be split correctly later), while
+    // passing along other node types.
+    mergeSentenceFragments(children) {
         const childrenPostMerge = [];
         let mergedSentenceFragment = [];
         const pushMergedSentenceFragment = () => {
@@ -151,6 +172,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 mergedSentenceFragment = [];
             }
         };
+
         for (const child of children) {
             if (child.type === TempType.SENTENCE_FRAGMENT) {
                 mergedSentenceFragment.push(child);
@@ -160,26 +182,100 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             }
         }
         pushMergedSentenceFragment();
-        children = childrenPostMerge;
 
-        // Return transformed children
-        return children;
+        return childrenPostMerge;
     }
 
-    parseSentenceDeclContext = (ctx) => {
-        let children = this.parseSentenceContext(ctx);
+    parseSentences = (ctx, children) => {
+        /*
+        The sentence parsing algorithm.
 
-        //
+        This uses a left-recursive longest-match algo, with constant precedence and
+        left associativity for all sentence definitions.
+        */
 
-        return children;
+        //              symbol(s)             |      expr mode         |       decl mode
+        // ------------------------------------------------------------------------------------
+        // fragment                           | continue               | continue
+        // number, string, logical, parameter | hard nesting           | ERROR
+        // map, block                         | hard nesting           | ERROR
+        // placeholder operator               | shift mode             > placeholder
+        // declaration operator               | shift mode             > V
+        //                                    |                        < hard terminator (decl)
+        // association operator               | hard terminator (expr) | ERROR
+        // soft terminator                    | soft terminator        | continue
+
+        // Top-level sentences must be terminated with a soft or hard terminator.
+
+        const allDecls = this.getDeclarations(ctx);
+
+        const finalChildren = [];
+        let sentenceCandidateNodes = [];
+        for (const child of children) {
+            let hardTerminator = false;
+            switch (child.type) {
+                case TempType.ASSOCIATION_OPERATOR:
+                    hardTerminator = true; // fallthrough
+                case Type.SOFT_TERMINATOR:
+                    // check if this is a full sentence.
+
+                    // TEMPORARY - this is way too basic for the real algo
+                    // convert to the template string
+                    const template = sentenceCandidateNodes.map((child) => {
+                        switch (child.type) {
+                            // Sentence fragment
+                            case TempType.MERGED_SENTENCE_FRAGMENT:
+                                return child.content;
+
+                            // Values (parameters)
+                            case undefined: // A literal (number, string, logical)
+                            case Type.PARAMETER:
+                            case Type.BLOCK:
+                            case Type.MAP:
+                                return "|";
+
+                            default:
+                                this.log.output.push(<Message type="error">A sentence cannot include a {child.type.toString()}</Message>);
+                                return "";
+                        }
+                    }).join("");
+
+                    // match against the teplate string
+                    let sentence = null;
+                    const ref = allDecls[template];
+                    if (ref !== undefined) {
+                        sentence = {
+                            type: Type.SENTENCE,
+                            content: template, // TEMPORARY - should hold the actual content
+                            ref: ref
+                        };
+                    }
+
+                    if (sentence !== null) {
+                        finalChildren.push(sentence);
+                    } else if (hardTerminator) {
+                        // ERROR
+                    }
+                    break;
+
+                default:
+                    sentenceCandidateNodes.push(child);
+            }
+        }
+
+        return finalChildren;
     }
 
-    parseSentenceExprContext = (ctx) => {
-        const children = this.parseSentenceContext(ctx);
+    // Return a flattened object containing a mapping of all sentence template
+    // declarations in the given lexical scope (context) to their bound ref objects.
+    getDeclarations = (ctx) => {
+        // Base case (above the top namespace = no decls)
+        if (ctx == null) return {};
 
-        //
-
-        return children;
+        // Recursive case
+        const decls = Object.assign({}, this.getDeclarations(ctx.parentCtx)); // Add decls of parent namespaces.
+        if (ctx.decls != null) Object.assign(decls, ctx.decls);               // Then, if a namespace yourself, add your decls (possibly hiding parent decls).
+        return decls;
     }
 
     /*
