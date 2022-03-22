@@ -1,29 +1,83 @@
 import Message from '../components/utils/Message';
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
-const TempType = Object.freeze({
-    SENTENCE_FRAGMENT: Symbol("sentence-fragment"),
-    MERGED_SENTENCE_FRAGMENT: Symbol("merged-sentence-fragment"),
-    ASSOCIATION_OPERATOR: Symbol("association-operator"),
-    DECLARATION_OPERATOR: Symbol("declaration-operator"),
-    PLACEHOLDER_OPERATOR: Symbol("placeholder-operator"),
-});
+// Repr
+class Repr {}
 
-export const Type = Object.freeze({
-    // number, string, boolean - use JS equivalents
+// Intermediate Representations
+class SentenceFragmentRepr extends Repr {
+    constructor(content) {
+        super();
+        this.content = content;
+    }
+}
+class SoftTerminatorRepr extends Repr {}
 
-    PARAMETER: Symbol("parameter"),
+class AssociationOperatorRepr extends Repr {
+    constructor(relation, remove) {
+        super();
+        this.relation = relation;
+        this.remove = remove;
+    }
+}
+class DeclarationOperatorRepr extends Repr {}
+class PlaceholderOperatorRepr extends Repr {}
 
-    MAP: Symbol("map"),
-    BLOCK: Symbol("block"),
+// Final Representations
+class NumberRepr extends Repr {
+    constructor(value) {
+        super();
+        this.value = value;
+    }
+}
+class StringRepr extends Repr {
+    constructor(value) {
+        super();
+        this.value = value;
+    }
+}
+class LogicalRepr extends Repr {
+    constructor(value) {
+        super();
+        this.value = value;
+    }
+}
+class ParameterRepr extends Repr {
+    constructor(index, extraction) {
+        super();
+        this.index = index;
+        this.extraction = extraction;
+    }
+}
+class MapRepr extends Repr {
+    constructor(children) {
+        super();
+        this.children = children;
+    }
+}
+class BlockRepr extends Repr {
+    constructor(children) {
+        super();
+        this.children = children;
+    }
+}
 
-    ASSOCIATION: Symbol("association"),
-    DECLARATION: Symbol("declaration"),
-    PLACEHOLDER: Symbol("placeholder"),
+// AssociationRepr - not sure what this will have yet
 
-    SENTENCE: Symbol("sentence"),
-    SOFT_TERMINATOR: Symbol("soft-terminator"),
-});
+class SentenceRepr extends Repr {
+    constructor(ref, params) {
+        super();
+        this.ref = ref;
+        this.params = params;
+    }
+}
+class DeclarationRepr extends Repr {
+    constructor(template, ref) {
+        super();
+        this.template = template;
+        this.ref = ref;
+    }
+}
 
 // This class defines a complete visitor for a parse tree produced by ProtoParser.
 export default class ProtoVisitor extends ProtoParserVisitor {
@@ -59,25 +113,24 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 	visitNumber_literal = (ctx) => {
         const [whole, frac] = ctx.INT_LITERAL();
         const point = ctx.DECIMAL_POINT();
-        return parseFloat(
+        return new NumberRepr(parseFloat(
             whole.getText() +
             (point != null ? point.getText() : "") +
             (frac != null ? frac.getText() : "")
-        );
+        ));
     }
-	visitString_literal = (ctx) => ctx.STRING_LITERAL().getText();
-	visitLogical_literal = (ctx) => ctx.LOGICAL_LITERAL().getText() === "true";
+	visitString_literal = (ctx) => new StringRepr(ctx.STRING_LITERAL().getText());
+	visitLogical_literal = (ctx) => new LogicalRepr(ctx.LOGICAL_LITERAL().getText() === "true");
 
     // Translate parameters into their AST representation
     // Note: Like basic literals, parameters can appear anywhere
     visitParameter = (ctx) => {
         const index = ctx.parameter_index();
         const extraction = ctx.parameter_extraction();
-        return {
-            type: Type.PARAMETER,
-            index: index != null ? parseInt(index.getText()) : 1,
-            extraction: extraction != null ? this.visitMap_literal(extraction.map_literal()) : []
-        };
+        return new ParameterRepr(
+            index != null ? parseInt(index.getText()) : 1,
+            extraction != null ? this.visitMap_literal(extraction.map_literal()) : []
+        );
     }
 
     /* Pre-Sentence Parsing Representations
@@ -86,23 +139,14 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     // Translate sentence_fragment and the various syntactic operators
     // into their pre-sentence parsing AST representations.
 
-    // Use Type.SENTENCE for now - they'll be joined during sentence parse/link
-    visitSentence_fragment = (ctx) => ({
-        type: TempType.SENTENCE_FRAGMENT,
-        content: ctx.getText()
         // Type.SENTENCE has a `ref` too (and its `content` is different)
-    });
-    visitDeclaration_operator = () => ({
-        type: TempType.DECLARATION_OPERATOR
+    visitSentence_fragment = (ctx) => new SentenceFragmentRepr(ctx.getText());
         // Type.DECLARATION has a `template` and `ref` too
-    });
-    visitPlaceholder_operator = () => ({
-        type: TempType.PLACEHOLDER_OPERATOR
-    });
-    visitAssociation_operator = (ctx) => ({
-        type: TempType.ASSOCIATION_OPERATOR,
-
-        relation: {
+    visitDeclaration_operator = () => new DeclarationOperatorRepr();
+    visitPlaceholder_operator = () => new PlaceholderOperatorRepr();
+    visitAssociation_operator = (ctx) => new AssociationOperatorRepr(
+        // Relation
+        {
             // List all of them, as the symbols might change in future in a way
             // that string manipulation won't work, eg. `---` becomes `--`, and
             // `-->` becomes `->`. `<->` and `</>` may also be removed.
@@ -116,24 +160,28 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             "</-": { leftDir: true, rightDir: false },
         }[ctx.ASSOCIATION().getText()],
 
-        remove: ctx.ASSOCIATION().getText().includes("/")
-
-        // Type.ASSOCIATION has a `left` and a `right` too
-    });
+        // Is remove relation?
+        ctx.ASSOCIATION().getText().includes("/")
+    );
 
     /* Sentence Parsing Contexts
     -------------------- */
 
     // Translate newline -> SOFT_TERMINATOR
-    visitNewline = () => ({type: Type.SOFT_TERMINATOR});
+    visitNewline = () => new SoftTerminatorRepr();
 
     // Program (entry point) and Compound Literals
-	visitProgram = (ctx) => ({ type: Type.BLOCK, children: this.parseSentenceDeclContext(ctx) });
-    visitBlock_literal = (ctx) => ({ type: Type.BLOCK, children: this.parseSentenceDeclContext(ctx) });
-    visitMap_literal = (ctx) => ({ type: Type.MAP, children: this.parseSentenceExprContext(ctx) });
+	visitProgram = (ctx) => new BlockRepr(this.parseSentenceDeclContext(ctx));
+    visitBlock_literal = (ctx) => new BlockRepr(this.parseSentenceDeclContext(ctx));
+    visitMap_literal = (ctx) => new MapRepr(this.parseSentenceExprContext(ctx));
+
+    /* Sentence Parsing Algorithm
+    -------------------- */
 
     parseSentenceDeclContext = (ctx) => {
-        ctx.decls = {"hello | b | c | d | e | f": 5}; // TEMPORARY
+        ctx.decls = {
+            "hello | b | c | d | e | f": 5  // TEMPORARY
+        };
         return this.parseSentenceContext(ctx);
     }
 
@@ -159,31 +207,33 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     // Merge SENTENCE_FRAGMENT nodes (they'll be split correctly later), while
     // passing along other node types.
     mergeSentenceFragments(children) {
-        const childrenPostMerge = [];
+        const newChildren = [];
+
+        // Initialise and utility
         let mergedSentenceFragment = [];
         const pushMergedSentenceFragment = () => {
             if (mergedSentenceFragment.length > 0) {
-                childrenPostMerge.push({
-                    type: TempType.MERGED_SENTENCE_FRAGMENT,
-                    content: mergedSentenceFragment
+                newChildren.push(new SentenceFragmentRepr(
+                    mergedSentenceFragment
                         .map((sentenceFragment) => sentenceFragment.content)
                         .join("")
-                });
+                ));
                 mergedSentenceFragment = [];
             }
         };
 
+        // Merge adjacent sentence fragments
         for (const child of children) {
-            if (child.type === TempType.SENTENCE_FRAGMENT) {
+            if (child instanceof SentenceFragmentRepr) {
                 mergedSentenceFragment.push(child);
             } else {
                 pushMergedSentenceFragment();
-                childrenPostMerge.push(child);
+                newChildren.push(child);
             }
         }
         pushMergedSentenceFragment();
 
-        return childrenPostMerge;
+        return newChildren;
     }
 
     parseSentences = (ctx, children) => {
@@ -213,44 +263,46 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         let sentenceCandidateNodes = [];
         for (const child of children) {
             let hardTerminator = false;
-            switch (child.type) {
-                case TempType.ASSOCIATION_OPERATOR:
+            switch (child.constructor) {
+                case AssociationOperatorRepr:
                     hardTerminator = true; // fallthrough
-                case Type.SOFT_TERMINATOR:
+                case SoftTerminatorRepr:
                     // check if this is a full sentence.
 
                     // TEMPORARY - this is way too basic for the real algo
-                    // convert to the template string
-                    const template = sentenceCandidateNodes.map((child) => {
-                        switch (child.type) {
+                    // Convert to the template string
+                    let template = "";
+                    let params = [];
+                    for (const node of sentenceCandidateNodes) {
+                        switch (node.constructor) {
                             // Sentence fragment
-                            case TempType.MERGED_SENTENCE_FRAGMENT:
-                                return child.content;
+                            case SentenceFragmentRepr:
+                                template += node.content;
+                                break;
 
                             // Values (parameters)
-                            case undefined: // A literal (number, string, logical)
-                            case Type.PARAMETER:
-                            case Type.BLOCK:
-                            case Type.MAP:
-                                return "|";
+                            case NumberRepr:
+                            case StringRepr:
+                            case LogicalRepr:
+                            case ParameterRepr:
+                            case BlockRepr:
+                            case MapRepr:
+                                template += "|";
+                                params.push(node);
+                                break;
 
+                            // Any other node - ERROR
                             default:
                                 this.log.output.push(<Message type="error">A sentence cannot include a {child.type.toString()}</Message>);
-                                return "";
                         }
-                    }).join("");
-
-                    // match against the teplate string
-                    let sentence = null;
-                    const ref = allDecls[template];
-                    if (ref !== undefined) {
-                        sentence = {
-                            type: Type.SENTENCE,
-                            content: template, // TEMPORARY - should hold the actual content
-                            ref: ref
-                        };
                     }
 
+                    // Match against the teplate string
+                    let sentence = null;
+                    const def = allDecls[template];
+                    if (def !== undefined) sentence = new SentenceRepr(def, params);
+
+                    // Add/Error as needed
                     if (sentence !== null) {
                         finalChildren.push(sentence);
                     } else if (hardTerminator) {
