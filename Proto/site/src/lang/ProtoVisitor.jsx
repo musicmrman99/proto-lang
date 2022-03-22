@@ -293,6 +293,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
                             // Any other node - ERROR
                             default:
+                                this.log.success = false;
                                 this.log.output.push(<Message type="error">A sentence cannot include a {child.type.toString()}</Message>);
                         }
                     }
@@ -306,7 +307,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                     if (sentence !== null) {
                         finalChildren.push(sentence);
                     } else if (hardTerminator) {
-                        // ERROR
+                        this.log.success = false;
+                        this.log.output.push(<Message type="error"></Message>);
                     }
                     break;
 
