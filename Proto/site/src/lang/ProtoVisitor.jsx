@@ -171,7 +171,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     visitNewline = () => new SoftTerminatorRepr();
 
     // Program (entry point) and Compound Literals
-	visitProgram = (ctx) => new BlockRepr(this.parseSentenceDeclContext(ctx));
+    visitProgram = (ctx) => new BlockRepr(this.parseSentenceDeclContext(ctx));
     visitBlock_literal = (ctx) => new BlockRepr(this.parseSentenceDeclContext(ctx));
     visitMap_literal = (ctx) => new MapRepr(this.parseSentenceExprContext(ctx));
 
@@ -180,7 +180,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
     parseSentenceDeclContext = (ctx) => {
         ctx.decls = {
-            "hello | b | c | d | e | f": 5  // TEMPORARY
+            "hello | a | b | c | d | e": new NumberRepr(5) // TEMPORARY
         };
         return this.parseSentenceContext(ctx);
     }
@@ -259,8 +259,21 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         const allDecls = this.getDeclarations(ctx);
 
+        // Set up variables and utilities
         const finalChildren = [];
         let sentenceCandidateNodes = [];
+        const terminateSentence = (hardTerminator) => {
+            const sentence = this.terminateSentence(sentenceCandidateNodes, allDecls);
+            if (sentence !== null) {
+                finalChildren.push(sentence);
+            } else if (hardTerminator) {
+                this.log.success = false;
+                this.log.output.push(<Message type="error">Incomplete Sentence: `{sentenceCandidateNodes.toString()}`</Message>);
+            }
+            sentenceCandidateNodes = [];
+        }
+
+        // Parse Children
         for (const child of children) {
             let hardTerminator = false;
             switch (child.constructor) {
@@ -268,20 +281,16 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                     hardTerminator = true; // fallthrough
                 case SoftTerminatorRepr:
                     // Check if this is a full sentence.
-                    const sentence = this.terminateSentence(sentenceCandidateNodes, allDecls);
-                    if (sentence !== null) {
-                        finalChildren.push(sentence);
-                    } else if (hardTerminator) {
-                        this.log.success = false;
-                        this.log.output.push(<Message type="error"></Message>);
-                    }
+                    terminateSentence(hardTerminator);
                     break;
 
                 default:
                     sentenceCandidateNodes.push(child);
             }
         }
+        if (sentenceCandidateNodes.length > 0) terminateSentence(true);
 
+        // Return children
         return finalChildren;
     }
 
