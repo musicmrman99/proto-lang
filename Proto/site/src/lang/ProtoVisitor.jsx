@@ -280,7 +280,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 case AssociationOperatorRepr:
                     hardTerminator = true; // fallthrough
                 case SoftTerminatorRepr:
-                    // Check if this is a full sentence.
+                    // Flush previous sentence (up to this point) to final children
                     terminateSentence(hardTerminator);
                     break;
 
@@ -288,6 +288,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                     sentenceCandidateNodes.push(child);
             }
         }
+
+        // Flush last sentence to final children
         if (sentenceCandidateNodes.length > 0) terminateSentence(true);
 
         // Return children
