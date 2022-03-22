@@ -297,7 +297,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         return decls;
     }
 
-    // Terminate the sentence if needed/possible.
+    // Terminate the sentence if possible.
     // TEMPORARY - this is way too basic for the real algo
     terminateSentence = (sentenceCandidateNodes, allDecls) => {
         // Convert to the template string
@@ -324,7 +324,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 // Any other node - ERROR
                 default:
                     this.log.success = false;
-                    this.log.output.push(<Message type="error">A sentence cannot include a {child.type.toString()}</Message>);
+                    this.log.output.push(<Message type="error">A sentence cannot include a {node.constructor.name}</Message>);
             }
         }
 
