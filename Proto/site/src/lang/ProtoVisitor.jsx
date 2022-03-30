@@ -370,7 +370,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     }
 
     // Try to create a sentence from the given set of nodes. Return null if the sentence is incomplete.
-    parseSentence = (sentence, allDecls) => {
+    parseSentence = (sentence, allDecls, indent = 0) => {
         //              symbol(s)             |      expr mode         |       decl mode
         // ------------------------------------------------------------------------------------
         // fragment                           | continue               | continue
@@ -392,18 +392,84 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         - This algorithm assumes that sentences that only include placeholders are disallowed.
         */
 
-        // 1) Get a list of all possible matches of a sentence template, ignoring recursion.
+        const indentStr = indent > 1 ? "-".repeat(indent-1)+"> " : "";
+        const log = (message) => {
+            this.log.output.push(<Message type="info">{indentStr}{message}</Message>);
+        };
+
+        log("Sentence: " + JSON.stringify(sentence));
+
+        // 1) If it's a literal, return it directly (no sentence parsing).
+        if (sentence.length === 1 && this.isLiteral(sentence[0])) {
+            return sentence[0];
+        }
+
+        // 2) Get a list of all possible matches of a sentence template (as an array of
+        //    [decl, [Repr, ...]] pairs), ignoring recursion.
+        log("In-Scope Declarations:");
+        allDecls.forEach(decl => {
+            log("| "+JSON.stringify(decl.template));
+        });
+
         const sortedTemplateMatches = allDecls
-            .map((decl) => this.getAllTemplateMatches(sentence, decl.template))
-            .filter((sentence) => sentence.length !== 0);
-        this.log.output.push(<Message type="info">{JSON.stringify(sortedTemplateMatches)}</Message>);
+            // Merge the lists of template matches for each declaration while preserving the declaration
+            .reduce((allSentenceCandidates, decl) => {
+                this.getAllTemplateMatches(sentence, decl.template).forEach(
+                    (sentenceCandidate) => allSentenceCandidates.push([decl, sentenceCandidate])
+                );
+                return allSentenceCandidates;
+            }, [])
+            // Remove non-matching declarations
+            .filter(([_, sentence]) => sentence.length !== 0);
 
-        // 2) Recurse into each match and get the best matching sentence.
-        //
+        // 3) For each sentence candidate, try to get a match. First match is the best match of this sentence.
+        log("Match Declaration Candidates:");
+        for (const [decl, sentence] of sortedTemplateMatches) {
+            // 3.1) Recursive Case: Try to parse each argument of the sentence (to get the
+            //      best matching sub-sentence) to form a full sentence.
+            let fullSentence = new SentenceRepr(decl.ref, []);
+            for (const node of sentence) {
+                if (node === null) {
+                    fullSentence = null;
+                    break;
 
-        // 3) If each recurse returns a sentence, then insert them into a new sentence at this level and return it.
-        //
+                } else if (this.isArgument(node)) {
+                    const parsedSentence = this.parseSentence(node.children, allDecls, indent + 2);
+                    if (parsedSentence !== null) {
+                        fullSentence.params.push(parsedSentence)
+
+                    } else {
+                        fullSentence = null;
+                        break;
+                    }
+                }
+            }
+
+            // 3.2) If it makes a full sentence, return it (the first full sentence found wins)
+            if (this.isSentence(fullSentence)) {
+                log(JSON.stringify(decl.template) + " -- MATCH");
+                return fullSentence;
+            } else {
+                log(JSON.stringify(decl.template) + " -- NO MATCH");
+            }
+        }
+
+        // 4) Base Case: No matching sentence found
+        return null;
     }
+
+    isArgument = (node) => node.constructor === ArgumentRepr;
+    isSentence = (node) => node.constructor === SentenceRepr;
+    isLiteral = (node) => (
+        [
+            NumberRepr,
+            StringRepr,
+            LogicalRepr,
+            ParameterRepr,
+            MapRepr,
+            BlockRepr
+        ].includes(node.constructor)
+    );
 
     /**
     Match the given sentence to the given template.
@@ -442,8 +508,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     getAllTemplateMatches(
             sentence,
             template,
-            sentenceInfo = { nodeIndex: 0, strIndex: 0 },
-            templateNodeIndex = 0
+            sentenceInfo = { nodeIndex: 0, strIndex: 0 }
     ) {
         /* 1) Zero-case (recursive base-case)
         -------------------- */
@@ -459,7 +524,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         // Initial sentence/template nodes
         let sentenceNode = sentence[sentenceInfo.nodeIndex];
-        let templateNode = template[0]; // Try the first node initially
+        let templateNode = template[0]; // Try the first node (fragment or placeholder) initially
 
         /* 3) Initial node is a fragment - align remaining sentence to (placeholder, fragment) pairs
         -------------------- */
@@ -495,16 +560,16 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             if (initialSentenceFragment.content !== "") return matches; // Ie. return empty array
 
             // 3.6) Base Case: Return sentence as it stands
-            if (remainingNodes.length === 0) return [[templateNode]];
+            const remainingNodesLength = remainingNodes.reduce((accum, node) => accum + node.length(), 0);
+            if (remainingNodesLength === 0) return [[templateNode]];
 
             // 3.7) Recursive Case: Binary fork (as described above)
                 // Continue checking for this fragment
             matches.push(
                 ...this.getAllTemplateMatches(
-                    remainingNodes,               // Check the remaining sentence nodes
-                    template.slice(),             // Keep looking for the same template fragment
-                    { nodeIndex: 0, nodePos: 0 }, // Check from the beginning of the remaining sentence nodes
-                    templateNodeIndex             // Keep looking for the same template fragment
+                    remainingNodes,              // Check the remaining sentence nodes
+                    template.slice(),            // Keep looking for the same template fragment
+                    { nodeIndex: 0, nodePos: 0 } // Check from the beginning of the remaining sentence nodes
                 ).map(
                     (match) => [templateNode, ...match] // Prepend the matched fragment to every sub-match
                 )
@@ -513,10 +578,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 // Advance to next placeholder/fragment pair
             matches.push(
                 ...this.getAllTemplateMatches(
-                    remainingNodes,                // Check the remaining sentence nodes
-                    template.slice(1),             // Slice off the matched template fragment
-                    { nodeIndex: 0, strIndex: 0 }, // Start looking at the beginning of the remaining sentence fragment
-                    1                              // Start looking for the next template fragment (index 1 after slice)
+                    remainingNodes,               // Check the remaining sentence nodes
+                    template.slice(1),            // Slice off the matched template fragment
+                    { nodeIndex: 0, strIndex: 0 } // Start looking at the beginning of the remaining sentence fragment
                 ).map(
                     (match) => [templateNode, ...match] // Prepend the matched fragment to every sub-match
                 )
@@ -532,11 +596,11 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // If there is not a corresponding template fragment for the last placeholder, then consume all remaining
         // input. If there is any remaining input, match it (a placeholder must match at least one 'thing' - a
         // single character of sentence fragment, or a literal or other node).
-        if (templateNodeIndex >= template.length) {
+        if (template.length <= 1) { // 2+ nodes required (placeholder, fragment)
             const remainingNodes = sentence.slice(sentenceInfo.nodeIndex);
             const remainingNodesLength = remainingNodes.reduce((accum, node) => accum + node.length(), 0)
-            if (remainingNodes.length >= 1 && remainingNodesLength >= 1) {
-                matches.push(new ArgumentRepr(remainingNodes));
+            if (remainingNodesLength >= 1) {
+                matches.push([new ArgumentRepr(remainingNodes)]);
             }
             return matches;
         }
@@ -558,7 +622,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         while (sentenceInfo.nodeIndex < sentence.length) {
             // Update sentence/template node variables
             sentenceNode = sentence[sentenceInfo.nodeIndex];
-            templateNode = template[templateNodeIndex];
+            templateNode = template[1]; // The fragment
             sentenceInfo.strIndex = this.isSentenceFragment(sentenceNode) ? 0 : null;
 
             // 5.1) If not a sentence fragment, it cannot match the template fragment, so skip it.
@@ -607,7 +671,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         // 5.6) Fail if the placeholder match is a zero-length match
         const consumedNodesLength = consumedNodes.reduce((accum, node) => accum + node.length(), 0);
-        if (consumedNodes.length === 0 || consumedNodesLength === 0) {
+        if (consumedNodesLength === 0) {
             return matches; // Did not match placeholder
         }
 
@@ -615,16 +679,16 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         const argument = new ArgumentRepr(consumedNodes);
 
         // 5.8) Base Case: Return sentence as it stands
-        if (remainingNodes.length === 0) return [[argument, templateNode]];
+        const remainingNodesLength = remainingNodes.reduce((accum, node) => accum + node.length(), 0);
+        if (remainingNodesLength === 0) return [[argument, templateNode]];
 
         // 5.9) Recursive Case: Binary fork (as described above)
             // Continue checking for this fragment
         matches.push(
             ...this.getAllTemplateMatches(
-                remainingNodes,               // Check the remaining sentence nodes
-                template.slice(),             // Keep looking for the same template fragment
-                { nodeIndex: 0, nodePos: 0 }, // Check from the beginning of the remaining sentence nodes
-                templateNodeIndex             // Keep looking for the same template fragment
+                remainingNodes,              // Check the remaining sentence nodes
+                template.slice(),            // Keep looking for the same template fragment
+                { nodeIndex: 0, nodePos: 0 } // Check from the beginning of the remaining sentence nodes
             ).map(
                 // eslint-disable-next-line no-loop-func -- the closure over templateNode is never used outside or across iterations of the loop
                 (match) => [argument, templateNode, ...match] // Prepend the matched argument and fragment to every sub-match
@@ -634,10 +698,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Advance to next placeholder/fragment pair
         matches.push(
             ...this.getAllTemplateMatches(
-                remainingNodes,                // Check the remaining sentence nodes
-                template.slice(2),             // Slice off the matched template placeholder and fragment
-                { nodeIndex: 0, strIndex: 0 }, // Check from the beginning of the remaining sentence nodes
-                1                              // Start looking for the next template fragment (index 1 after slice)
+                remainingNodes,               // Check the remaining sentence nodes
+                template.slice(2),            // Slice off the matched template placeholder and fragment
+                { nodeIndex: 0, strIndex: 0 } // Check from the beginning of the remaining sentence nodes
             ).map(
                 // eslint-disable-next-line no-loop-func -- the closure over templateNode is never used outside or across iterations of the loop
                 (match) => [argument, templateNode, ...match] // Prepend the matched fragment to every sub-match
