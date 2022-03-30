@@ -1,17 +1,25 @@
 import Message from '../components/utils/Message';
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
-// Repr
+/* Representations
+-------------------------------------------------- */
+
 class Repr {}
 
-// Intermediate Representations
+/* Intermediate Representations
+-------------------- */
+
 class SentenceFragmentRepr extends Repr {
     constructor(content) {
         super();
         this.content = content;
     }
+
+    length = () => this.content.length;
 }
-class SoftTerminatorRepr extends Repr {}
+class SoftTerminatorRepr extends Repr {
+    length = () => 0;
+}
 
 class AssociationOperatorRepr extends Repr {
     constructor(relation, remove) {
@@ -19,28 +27,53 @@ class AssociationOperatorRepr extends Repr {
         this.relation = relation;
         this.remove = remove;
     }
-}
-class DeclarationOperatorRepr extends Repr {}
-class PlaceholderOperatorRepr extends Repr {}
 
-// Final Representations
+    length = () => 3;
+}
+class DeclarationOperatorRepr extends Repr {
+    length = () => 1;
+}
+class PlaceholderOperatorRepr extends Repr {
+    length = () => 1;
+}
+
+// Used to represent arguments to a sentence template, ie. the
+// values (or possibly sub-sentences) that fill in placeholders.
+class ArgumentRepr extends Repr {
+    constructor(children = []) {
+        super();
+        this.children = children;
+    }
+
+    length = () => this.children.length;
+}
+
+/* Final Representations
+-------------------- */
+
 class NumberRepr extends Repr {
     constructor(value) {
         super();
         this.value = value;
     }
+
+    length = () => this.value.toString().length;
 }
 class StringRepr extends Repr {
     constructor(value) {
         super();
         this.value = value;
     }
+    
+    length = () => this.value.length + 2; // for the quotes
 }
 class LogicalRepr extends Repr {
     constructor(value) {
         super();
         this.value = value;
     }
+
+    length = () => this.value.toString().length;
 }
 class ParameterRepr extends Repr {
     constructor(index, extraction) {
@@ -48,18 +81,24 @@ class ParameterRepr extends Repr {
         this.index = index;
         this.extraction = extraction;
     }
+
+    length = () => 1 + this.index.toString().length + this.extraction.length();
 }
 class MapRepr extends Repr {
     constructor(children) {
         super();
         this.children = children;
     }
+
+    length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
 }
 class BlockRepr extends Repr {
     constructor(children) {
         super();
         this.children = children;
     }
+
+    length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
 }
 
 // AssociationRepr - not sure what this will have yet
@@ -70,6 +109,17 @@ class SentenceRepr extends Repr {
         this.ref = ref;
         this.params = params;
     }
+
+    length = () => this.parts.reduce((accum, part) => accum + part.length(), 0);
+}
+
+class TemplateRepr extends Repr {
+    constructor(parts) {
+        super();
+        this.parts = parts;
+    }
+
+    length = () => this.parts.reduce((accum, part) => accum + part.length(), 0);
 }
 class DeclarationRepr extends Repr {
     constructor(template, ref) {
@@ -77,7 +127,12 @@ class DeclarationRepr extends Repr {
         this.template = template;
         this.ref = ref;
     }
+
+    length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
 }
+
+/* Parser
+-------------------------------------------------- */
 
 // This class defines a complete visitor for a parse tree produced by ProtoParser.
 export default class ProtoVisitor extends ProtoParserVisitor {
@@ -119,7 +174,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             (frac != null ? frac.getText() : "")
         ));
     }
-	visitString_literal = (ctx) => new StringRepr(ctx.STRING_LITERAL().getText());
+	visitString_literal = (ctx) => new StringRepr(ctx.STRING_LITERAL().getText().substring(1, -1)); // Remove the quotes
 	visitLogical_literal = (ctx) => new LogicalRepr(ctx.LOGICAL_LITERAL().getText() === "true");
 
     // Translate parameters into their AST representation
@@ -179,9 +234,37 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     -------------------- */
 
     parseSentenceDeclContext = (ctx) => {
-        ctx.decls = {
-            "hello | a | b | c | d | e": new NumberRepr(5) // TEMPORARY
-        };
+        ctx.decls = [
+            new DeclarationRepr(
+                [
+                    new SentenceFragmentRepr("Hello "),
+                    new PlaceholderOperatorRepr(),
+                    new SentenceFragmentRepr(".")
+                ],
+                new StringRepr("hello |.")
+            ),
+            new DeclarationRepr(
+                [
+                    new SentenceFragmentRepr("Mr "),
+                    new PlaceholderOperatorRepr()
+                ],
+                new StringRepr("mr |")
+            ),
+            new DeclarationRepr(
+                [
+                    new SentenceFragmentRepr("Logan")
+                ],
+                new StringRepr("logan")
+            ),
+            new DeclarationRepr(
+                [
+                    new PlaceholderOperatorRepr(),
+                    new SentenceFragmentRepr(" + "),
+                    new PlaceholderOperatorRepr()
+                ],
+                new StringRepr("| + |")
+            )
+        ];
         return this.parseSentenceContext(ctx);
     }
 
@@ -243,34 +326,21 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         This uses a left-recursive longest-match algo, with constant precedence and
         left associativity for all sentence definitions.
         */
-
-        //              symbol(s)             |      expr mode         |       decl mode
-        // ------------------------------------------------------------------------------------
-        // fragment                           | continue               | continue
-        // number, string, logical, parameter | hard nesting           | ERROR
-        // map, block                         | hard nesting           | ERROR
-        // placeholder operator               | shift mode             > placeholder
-        // declaration operator               | shift mode             > V
-        //                                    |                        < hard terminator (decl)
-        // association operator               | hard terminator (expr) | ERROR
-        // soft terminator                    | soft terminator        | continue
-
-        // Top-level sentences must be terminated with a soft or hard terminator.
-
+       
         const allDecls = this.getDeclarations(ctx);
+        const finalChildren = [];
 
         // Set up variables and utilities
-        const finalChildren = [];
-        let sentenceCandidateNodes = [];
+        let candidateNodes = [];
         const terminateSentence = (hardTerminator) => {
-            const sentence = this.terminateSentence(sentenceCandidateNodes, allDecls);
+            const sentence = this.parseSentence(candidateNodes, allDecls);
             if (sentence !== null) {
                 finalChildren.push(sentence);
             } else if (hardTerminator) {
                 this.log.success = false;
-                this.log.output.push(<Message type="error">Incomplete Sentence: `{sentenceCandidateNodes.toString()}`</Message>);
+                this.log.output.push(<Message type="error">Incomplete Sentence: `{candidateNodes.toString()}`</Message>);
             }
-            sentenceCandidateNodes = [];
+            candidateNodes = [];
         }
 
         // Parse Children
@@ -284,67 +354,338 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                     terminateSentence(hardTerminator);
                     break;
 
+                // TODO: Deal with placeholders and declarations later (ie. mode switching).
+
                 default:
-                    sentenceCandidateNodes.push(child);
+                    candidateNodes.push(child);
             }
         }
 
-        // Flush last sentence to final children
-        if (sentenceCandidateNodes.length > 0) terminateSentence(true);
+        // The end of the sentence parsing context is another hard terminator,
+        // but ignore it if we only just terminated the last sentence.
+        if (candidateNodes.length > 0) terminateSentence(true);
 
         // Return children
         return finalChildren;
     }
 
+    // Try to create a sentence from the given set of nodes. Return null if the sentence is incomplete.
+    parseSentence = (sentence, allDecls) => {
+        //              symbol(s)             |      expr mode         |       decl mode
+        // ------------------------------------------------------------------------------------
+        // fragment                           | continue               | continue
+        // number, string, logical, parameter | hard nesting           | ERROR
+        // map, block                         | hard nesting           | ERROR
+        // placeholder operator               | shift mode             > placeholder
+        // declaration operator               | shift mode             > V
+        //                                    |                        < hard terminator (decl)
+        // association operator               | hard terminator (expr) | ERROR
+        // soft terminator                    | soft terminator        | continue
+
+        /*
+        IMPORTANT:
+        - Top-level sentence must be terminated with a soft or hard terminator.
+        - Top level sentence must match the entire node list and return ONE sentence, or null
+        - Sub-sentences may extend to anywhere in the node list
+
+        NOTE:
+        - This algorithm assumes that sentences that only include placeholders are disallowed.
+        */
+
+        // 1) Get a list of all possible matches of a sentence template, ignoring recursion.
+        const sortedTemplateMatches = allDecls
+            .map((decl) => this.getAllTemplateMatches(sentence, decl.template))
+            .filter((sentence) => sentence.length !== 0);
+        this.log.output.push(<Message type="info">{JSON.stringify(sortedTemplateMatches)}</Message>);
+
+        // 2) Recurse into each match and get the best matching sentence.
+        //
+
+        // 3) If each recurse returns a sentence, then insert them into a new sentence at this level and return it.
+        //
+    }
+
+    /**
+    Match the given sentence to the given template.
+
+    Uses a recursive implementation. Upon finding a match against the current
+    template fragment, it recurses twice (a "binary fork") with different
+    parameters to try to find:
+
+    1) The next match of this fragment.
+    2) The first match of the next fragment after the position of this
+       match of this fragment.
+
+    Ie. (where the number (-N-) represents trying to find a match for the Nth
+    fragment in the template):
+
+    ```txt
+            /-3- ...
+        /-2-+
+        |   \-2- ...
+    -1-+            <-- Note: This requires there to be at least one fragment.
+        |   /-2- ...
+        \-1-+
+            \-1- ...
+    ```
+
+    Note: The sentenceInfo and templateNodeIndex parameters are internally used for
+    recursion. They should not be used by the top-level caller, and their values or
+    names may be changed or they may be removed altogether without notice or a major
+    or minor version bump.
+
+    @param {array<Repr>} sentence The input sentence to match against the template.
+    @param {array<Repr>} template The template to match against.
+    @return {array<array<Repr>>} The list of possible combinations of sentences
+      (as Reprs).
+    */
+    getAllTemplateMatches(
+            sentence,
+            template,
+            sentenceInfo = { nodeIndex: 0, strIndex: 0 },
+            templateNodeIndex = 0
+    ) {
+        /* 1) Zero-case (recursive base-case)
+        -------------------- */
+
+        // No template can match a zero-length sentence and no sentence can match a zero-length template.
+        if (sentence.length === 0 || template.length === 0) return [];
+
+        /* 2) Setup
+        -------------------- */
+
+        // Initialise return value
+        const matches = [];
+
+        // Initial sentence/template nodes
+        let sentenceNode = sentence[sentenceInfo.nodeIndex];
+        let templateNode = template[0]; // Try the first node initially
+
+        /* 3) Initial node is a fragment - align remaining sentence to (placeholder, fragment) pairs
+        -------------------- */
+
+        // If template contains a fragment as the first (possibly only) node, then deal with it and slice it off
+        // to align the remaining sentence to (placeholder, fragment) pairs. The last item being a placeholder
+        // is dealt with in the next section.
+        if (this.isSentenceFragment(templateNode)) {
+            // 3.1) Fail if not a sentence fragment (as it cannot match the template fragment)
+            if (!this.isSentenceFragment(sentenceNode)) return matches; // Ie. return empty array
+
+            // 3.2) Attempt to match the first template fragment
+            const newInitSentenceFragments = this.spliceTemplateFragment(
+                templateNode, sentenceNode, sentenceInfo.strIndex
+            );
+
+            // 3.3) Fail if no match
+            if (newInitSentenceFragments === null) return matches; // Ie. return empty array
+
+            // 3.4) Reorganise the sentence into the consumed part and the remaining part
+            const [initialSentenceFragment, remainingSentenceFragment] = newInitSentenceFragments;
+
+            const remainingNodes = [
+                ...(                                           // The part of the fragment after the template fragment match if not empty,
+                    remainingSentenceFragment.content !== "" ?
+                        [remainingSentenceFragment] :
+                        [] // Exclude remaining fragment if it has no content
+                ),
+                ...sentence.slice(sentenceInfo.nodeIndex + 1)  // Every node after this fragment node
+            ];
+
+            // 3.5) Fail if match is not at the first character
+            if (initialSentenceFragment.content !== "") return matches; // Ie. return empty array
+
+            // 3.6) Base Case: Return sentence as it stands
+            if (remainingNodes.length === 0) return [[templateNode]];
+
+            // 3.7) Recursive Case: Binary fork (as described above)
+                // Continue checking for this fragment
+            matches.push(
+                ...this.getAllTemplateMatches(
+                    remainingNodes,               // Check the remaining sentence nodes
+                    template.slice(),             // Keep looking for the same template fragment
+                    { nodeIndex: 0, nodePos: 0 }, // Check from the beginning of the remaining sentence nodes
+                    templateNodeIndex             // Keep looking for the same template fragment
+                ).map(
+                    (match) => [templateNode, ...match] // Prepend the matched fragment to every sub-match
+                )
+            );
+
+                // Advance to next placeholder/fragment pair
+            matches.push(
+                ...this.getAllTemplateMatches(
+                    remainingNodes,                // Check the remaining sentence nodes
+                    template.slice(1),             // Slice off the matched template fragment
+                    { nodeIndex: 0, strIndex: 0 }, // Start looking at the beginning of the remaining sentence fragment
+                    1                              // Start looking for the next template fragment (index 1 after slice)
+                ).map(
+                    (match) => [templateNode, ...match] // Prepend the matched fragment to every sub-match
+                )
+            );
+
+            // 3.6) Return everything (this is the top-level return if this condition is hit)
+            return matches;
+        }
+
+        /* 4. Final node is a placeholder - consume all remaining input
+        -------------------- */
+
+        // If there is not a corresponding template fragment for the last placeholder, then consume all remaining
+        // input. If there is any remaining input, match it (a placeholder must match at least one 'thing' - a
+        // single character of sentence fragment, or a literal or other node).
+        if (templateNodeIndex >= template.length) {
+            const remainingNodes = sentence.slice(sentenceInfo.nodeIndex);
+            const remainingNodesLength = remainingNodes.reduce((accum, node) => accum + node.length(), 0)
+            if (remainingNodes.length >= 1 && remainingNodesLength >= 1) {
+                matches.push(new ArgumentRepr(remainingNodes));
+            }
+            return matches;
+        }
+
+        /* 5. Nodes are (placeholder [n-1], fragment [n]) pairs - consume until match, then binary fork
+        -------------------- */
+
+        /*
+        Now we have effectively stripped the leading fragment and trailing placeholder,
+        the remaining input will be (placeholder, fragment) pairs, where the fragment is
+        at index N and the placeholder at index N-1 in `template`.
+
+        Next, consume all input until this template fragment (index N) matches, then
+        binary fork & return the matches.
+        */
+
+        // Keep consuming input until the first fragment match
+        let newInitSentenceFragments = null;
+        while (sentenceInfo.nodeIndex < sentence.length) {
+            // Update sentence/template node variables
+            sentenceNode = sentence[sentenceInfo.nodeIndex];
+            templateNode = template[templateNodeIndex];
+            sentenceInfo.strIndex = this.isSentenceFragment(sentenceNode) ? 0 : null;
+
+            // 5.1) If not a sentence fragment, it cannot match the template fragment, so skip it.
+            if (!this.isSentenceFragment(sentenceNode)) {
+                sentenceInfo.nodeIndex++;
+                continue;
+            }
+
+            // 5.2) Attempt to match the next template fragment
+            newInitSentenceFragments = this.spliceTemplateFragment(
+                templateNode, sentenceNode, sentenceInfo.strIndex
+            );
+
+            // 5.3) If no match, iterate to next sentence node; if found a match, continue out of the loop.
+            if (newInitSentenceFragments === null) {
+                sentenceInfo.nodeIndex++;
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        // 5.4) Fail if there were no matches in the rest of the sentence
+        if (newInitSentenceFragments === null) return matches;
+
+        // 5.5) Reorganise the sentence into the consumed part and the remaining part
+        const [initialSentenceFragment, remainingSentenceFragment] = newInitSentenceFragments;
+
+        const consumedNodes = [
+            ...sentence.slice(0, sentenceInfo.nodeIndex), // Every node before this fragment node,
+            ...(                                          // Plus the part of the fragment before the template fragment match if not empty.
+                initialSentenceFragment.content !== "" ?
+                    [initialSentenceFragment] :
+                    []
+            )
+        ];
+
+        const remainingNodes = [
+            ...(                                           // The part of the fragment after the template fragment match if not empty,
+                remainingSentenceFragment.content !== "" ?
+                    [remainingSentenceFragment] :
+                    [] // Exclude remaining fragment if it has no content
+            ),
+            ...sentence.slice(sentenceInfo.nodeIndex + 1)  // Every node after this fragment node
+        ];
+
+        // 5.6) Fail if the placeholder match is a zero-length match
+        const consumedNodesLength = consumedNodes.reduce((accum, node) => accum + node.length(), 0);
+        if (consumedNodes.length === 0 || consumedNodesLength === 0) {
+            return matches; // Did not match placeholder
+        }
+
+        // 5.7) Construct Repr for this placeholder match
+        const argument = new ArgumentRepr(consumedNodes);
+
+        // 5.8) Base Case: Return sentence as it stands
+        if (remainingNodes.length === 0) return [[argument, templateNode]];
+
+        // 5.9) Recursive Case: Binary fork (as described above)
+            // Continue checking for this fragment
+        matches.push(
+            ...this.getAllTemplateMatches(
+                remainingNodes,               // Check the remaining sentence nodes
+                template.slice(),             // Keep looking for the same template fragment
+                { nodeIndex: 0, nodePos: 0 }, // Check from the beginning of the remaining sentence nodes
+                templateNodeIndex             // Keep looking for the same template fragment
+            ).map(
+                // eslint-disable-next-line no-loop-func -- the closure over templateNode is never used outside or across iterations of the loop
+                (match) => [argument, templateNode, ...match] // Prepend the matched argument and fragment to every sub-match
+            )
+        );
+
+            // Advance to next placeholder/fragment pair
+        matches.push(
+            ...this.getAllTemplateMatches(
+                remainingNodes,                // Check the remaining sentence nodes
+                template.slice(2),             // Slice off the matched template placeholder and fragment
+                { nodeIndex: 0, strIndex: 0 }, // Check from the beginning of the remaining sentence nodes
+                1                              // Start looking for the next template fragment (index 1 after slice)
+            ).map(
+                // eslint-disable-next-line no-loop-func -- the closure over templateNode is never used outside or across iterations of the loop
+                (match) => [argument, templateNode, ...match] // Prepend the matched fragment to every sub-match
+            )
+        );
+
+        /* 6) Return Everything
+        -------------------- */
+
+        return matches;
+    }
+
+    // Utilities for getAllTemplateMatches()
+
+    spliceTemplateFragment = (templateNode, sentenceNode, sentenceStartPos) => {
+        // Try to parse template fragment out of sentence fragment node
+        let matchPos = sentenceNode.content
+            .substring(sentenceStartPos)   // Remove previously-consumed offset
+            .indexOf(templateNode.content) // Find the value
+        if (matchPos === -1) return null;  // Fail if not found
+        matchPos += sentenceStartPos;      // Add previously-consumed offset back on
+
+        // Splice out the matching part
+        return [
+            new SentenceFragmentRepr(sentenceNode.content.substring(0, matchPos)),
+            new SentenceFragmentRepr(sentenceNode.content.substring(matchPos + templateNode.content.length))
+        ];
+    }
+
+    isPlaceholder = (node) => node.constructor === PlaceholderOperatorRepr;
+    isSentenceFragment = (node) => node.constructor === SentenceFragmentRepr;
+
     // Return a flattened object containing a mapping of all sentence template
     // declarations in the given lexical scope (context) to their bound ref objects.
     getDeclarations = (ctx) => {
         // Base case (above the top namespace = no decls)
-        if (ctx == null) return {};
+        if (ctx == null) return [];
 
         // Recursive case
-        const decls = Object.assign({}, this.getDeclarations(ctx.parentCtx)); // Add decls of parent namespaces.
-        if (ctx.decls != null) Object.assign(decls, ctx.decls);               // Then, if a namespace yourself, add your decls (possibly hiding parent decls).
+        const decls = [...this.getDeclarations(ctx.parentCtx)]; // Add decls of parent namespaces.
+        if (ctx.decls != null) decls.push(...ctx.decls);        // Then, if a namespace yourself, add your decls (possibly hiding parent decls).
         return decls;
     }
 
-    // Terminate the sentence if possible.
-    // TEMPORARY - this is way too basic for the real algo
-    terminateSentence = (sentenceCandidateNodes, allDecls) => {
-        // Convert to the template string
-        let template = "";
-        let params = [];
-        for (const node of sentenceCandidateNodes) {
-            switch (node.constructor) {
-                // Sentence fragment
-                case SentenceFragmentRepr:
-                    template += node.content;
-                    break;
+    /* Utils
+    -------------------------------------------------- */
 
-                // Values (parameters)
-                case NumberRepr:
-                case StringRepr:
-                case LogicalRepr:
-                case ParameterRepr:
-                case BlockRepr:
-                case MapRepr:
-                    template += "|";
-                    params.push(node);
-                    break;
-
-                // Any other node - ERROR
-                default:
-                    this.log.success = false;
-                    this.log.output.push(<Message type="error">A sentence cannot include a {node.constructor.name}</Message>);
-            }
-        }
-
-        // Match against the teplate string
-        let sentence = null;
-        const def = allDecls[template];
-        if (def !== undefined) sentence = new SentenceRepr(def, params);
-        return sentence;
-    }
+    //
 
     /*
     Remaining:
