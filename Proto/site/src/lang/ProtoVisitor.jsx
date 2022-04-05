@@ -138,16 +138,23 @@ const isLiteral = (node) => (
     ].includes(node.constructor)
 );
 const isParameter = (node) => node.constructor === ParameterRepr;
-const isValue = (node) => isLiteral(node) || isParameter(node);
 
 // Sentences
+const isSentenceFragment = (node) => node.constructor === SentenceFragmentRepr;
+const isSoftTerminator = (node) => node.constructor === SoftTerminatorRepr;
 const isArgument = (node) => node.constructor === ArgumentRepr;
 const isSentence = (node) => node.constructor === SentenceRepr;
-const isSentenceFragment = (node) => node.constructor === SentenceFragmentRepr;
+
+// Associations
+const isAssociationOp = (node) => node.constructor === AssociationOperatorRepr;
 
 // Declarations
 const isPlaceholderOp = (node) => node.constructor === PlaceholderOperatorRepr;
 const isDeclarationOp = (node) => node.constructor === DeclarationOperatorRepr;
+
+// Composites
+const isValue = (node) => isLiteral(node) || isParameter(node);
+const isTerminator = (node) => isSoftTerminator(node) || isAssociationOp(node);
 
 /* Parser
 -------------------------------------------------- */
@@ -192,7 +199,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             (frac != null ? frac.getText() : "")
         ));
     }
-	visitString_literal = (ctx) => new StringRepr(ctx.STRING_LITERAL().getText().substring(1, -1)); // Remove the quotes
+	visitString_literal = (ctx) => new StringRepr(ctx.STRING_LITERAL().getText().slice(1, -1)); // Remove the quotes
 	visitLogical_literal = (ctx) => new LogicalRepr(ctx.LOGICAL_LITERAL().getText() === "true");
 
     // Translate parameters into their AST representation
@@ -244,53 +251,26 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     visitNewline = () => new SoftTerminatorRepr();
 
     // Program (entry point) and Compound Literals
-    visitProgram = (ctx) => new BlockRepr(this.parseSentenceDeclContext(ctx));
-    visitBlock_literal = (ctx) => new BlockRepr(this.parseSentenceDeclContext(ctx));
-    visitMap_literal = (ctx) => new MapRepr(this.parseSentenceExprContext(ctx));
+    visitProgram = (ctx) => this.parseBlock(ctx);
+    visitBlock_literal = (ctx) => this.parseBlock(ctx);
+    visitMap_literal = (ctx) => this.parseMap(ctx);
 
     /* Sentence Parsing Algorithm
     -------------------- */
 
-    parseSentenceDeclContext = (ctx) => {
-        ctx.decls = [
-            new DeclarationRepr(
-                [
-                    new SentenceFragmentRepr("Hello "),
-                    new PlaceholderOperatorRepr(),
-                    new SentenceFragmentRepr(".")
-                ],
-                new StringRepr("hello |.")
-            ),
-            new DeclarationRepr(
-                [
-                    new SentenceFragmentRepr("Mr "),
-                    new PlaceholderOperatorRepr()
-                ],
-                new StringRepr("mr |")
-            ),
-            new DeclarationRepr(
-                [
-                    new SentenceFragmentRepr("Logan")
-                ],
-                new StringRepr("logan")
-            ),
-            new DeclarationRepr(
-                [
-                    new PlaceholderOperatorRepr(),
-                    new SentenceFragmentRepr(" + "),
-                    new PlaceholderOperatorRepr()
-                ],
-                new StringRepr("| + |")
-            )
-        ];
-
-        let children = this.getNormalisedChildren(ctx);
-        return this.parseSentences(ctx, children, ["declaration"]);
+    parseBlock = (ctx) => {
+        ctx.decls = [];
+        const parent = new BlockRepr([]);
+        const children = this.getNormalisedChildren(ctx);
+        parent.children = this.parseSentences(ctx, parent, children, ["declaration"]);
+        return parent;
     }
 
-    parseSentenceExprContext = (ctx) => {
-        let children = this.getNormalisedChildren(ctx);
-        return this.parseSentences(ctx, children, ["assocation"]);
+    parseMap = (ctx) => {
+        const parent = new MapRepr([]);
+        const children = this.getNormalisedChildren(ctx);
+        parent.children = this.parseSentences(ctx, parent, children, ["assocation"]);
+        return parent;
     }
 
     getNormalisedChildren = (ctx) => {
@@ -341,62 +321,103 @@ export default class ProtoVisitor extends ProtoParserVisitor {
      * children, given the context.
      * 
      * @param {Object} ctx The context object provided by ANTLR Runtime.
+     * @param {Repr} parent The representation of the parent. May be modified if
+     *   needed. Returned children are automatically assigned to the parent.
      * @param {Array<Repr>} children The children to parse into sentences (and
      *   other things).
      * @param {Array<String>} additionalFeatures An array of strings indicating
      *   which features in addition to sentences are allowed to be interpreted
      *   in this context. The following features are supported:
      *   - "declaration" - Parses any declarations it finds.
-     * @returns {Array<SentenceRepr|DeclarationRepr|LiteralRepr>}
+     * 
+     * @returns {Array<SentenceRepr|DeclarationRepr|LiteralRepr>} The parsed
+     *   children of the parent.
      */
-    parseSentences = (ctx, children, additionalFeatures) => {
+    parseSentences = (ctx, parent, children, additionalFeatures) => {
         /*
         Details of the algorithm:
 
-        +--------------------------------------------------------------------------------------+
-        |                                    |                     Effect                      |
-        +              Symbol(s)             +-------------------------------------------------+
-        |                                    |          Expr          |          Decl          |
-        |--------------------------------------------------------------------------------------|
-        | fragment                           | buffer + continue      | buffer + continue      |
-        | number, string, logical, parameter | hard nesting           | ERROR                  |
-        | map, block                         | hard nesting           | ERROR                  |
-        | association operator               | hard terminator (expr) | ERROR                  |
-        | soft terminator                    | soft terminator        | ERROR                  |
-        | placeholder operator               | ERROR                  | placeholder            |
-        | declaration operator               | ERROR                  | hard terminator (decl) |
-        +--------------------------------------------------------------------------------------+
+        +-----------------------------------------------------------------------------+
+        |                                    |                 Effect                 |
+        +              Symbol(s)             +----------------------------------------+
+        |                                    |        Expr        |        Decl       |
+        |-----------------------------------------------------------------------------|
+        | fragment                           | buffer + continue  | buffer + continue |
+        | number, string, logical, parameter | hard nesting       | ERROR             |
+        | map, block                         | hard nesting       | ERROR             |
+        | association operator               | hard terminator    | ERROR             |
+        | soft terminator                    | soft terminator    | ERROR             |
+        | placeholder operator               | ERROR              | placeholder       |
+        | declaration operator               | ERROR              | terminator (decl) |
+        +-----------------------------------------------------------------------------+
 
         "Effect" Key
         --------------------
 
         Base:
-        - buffer + continue      - Add to the list of candidate nodes, then move to next token.
-        - hard nesting           - Must either appear on its own, or fit into a placeholder as
-                                   a sentence argument.
-        - soft terminator        - May terminate the sentence. If it doesn't, keep parsing.
-        - hard terminator (expr) - Must terminate the sentence and produce a SentenceRepr as a
-                                   new child of the current context. If it doesn't terminate
-                                   the sentence, then error.
+        - buffer + continue - Add to the list of candidate nodes, then move to next token.
+        - hard nesting      - Must either appear on its own, or fit into a placeholder as
+                              a sentence argument.
+        - soft terminator   - May terminate the sentence. If it doesn't, keep parsing.
+        - hard terminator   - Must terminate the sentence and produce a SentenceRepr as a
+                              new child of the current context. If it doesn't terminate
+                              the sentence, then error.
 
         Additional Features:
-        - hard terminator(decl) - Terminates the sentence template and produces a
-                                  DeclarationRepr. If the value/sentence after the declaration
-                                  point is incomplete or otherwise invalid, then error.
-                                  Requires the "declaration" additional feature.
-        - placeholder           - Represents itself. Requires the "declaration" additional
-                                  feature.
+        - terminator (decl) - Terminates the sentence template and produces a
+                              DeclarationRepr. If the value/sentence after the declaration
+                              point is incomplete or otherwise invalid, then error.
+                              Requires the "declaration" additional feature.
+        - placeholder       - Represents itself. Requires the "declaration" additional
+                              feature.
         */
 
-        const allDecls = this.getDeclarations(ctx);
+        // The collection of all declarations above this lexical scope.
+        const outerDecls = this.getDeclarations(ctx.parentCtx);
+
+        // Value is:
+        // - true if a declaration operator is allowed next.
+        // - false if a declaration operator is not allowed next.
+        // - a DeclarationRepr if next complete sentence is the value of a decl.
+        let declTemplate = additionalFeatures.includes("declaration");
+
+        // Utility for the last two. If it's not boolean, then it must be the relevant Repr.
+        const isImpossible = (value) => value === false;
+        const isPossible = (value) => value === true;
+        const isActual = (value) => value !== true && value !== false;
+
+        // A buffer for collected nodes until a valid syntactic construct is found
+        // (eg. a complete sentence, declaration operator, association operator, etc.),
+        // or until this sentence-parsing context's content is judged to be malformed.
+        let candidateNodes = [];
+
+        // The collation of all valid sentences.
         const finalChildren = [];
 
-        // Set up variables and utilities
-        let candidateNodes = [];
+        /**
+         * Utility (must be done for each soft/hard terminator, including the implicit one
+         * at the end of the context).
+         * 
+         * Check if nodes up to this point form a complete sentence based on all
+         * outer declarations and all declarations in this scope so far, and if
+         * so, flush the sentence to final children.
+         */
         const terminateSentence = (isHardTerminator) => {
-            const sentence = this.parseSentence(candidateNodes, allDecls);
+            const sentence = this.parseSentence(candidateNodes, outerDecls.concat(ctx.decls));
             if (sentence !== null) {
-                finalChildren.push(sentence);
+                if (isActual(declTemplate)) {
+                    const decl = new DeclarationRepr(declTemplate, sentence);
+                    ctx.decls.push(decl);
+                    declTemplate = true;
+
+                    this.log.output.push(<Message type="info">New declaration: {decl.toString()}</Message>);
+
+                } else {
+                    finalChildren.push(sentence);
+                }
+
+                candidateNodes = [];
+
             } else if (isHardTerminator) {
                 this.log.success = false;
                 this.log.output.push(
@@ -405,41 +426,87 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                     </Message>
                 );
             }
-            candidateNodes = [];
         }
 
         // Parse Children
         for (const child of children) {
             let isHardTerminator = false;
-            switch (child.constructor) {
-                case AssociationOperatorRepr:
-                    if (!additionalFeatures.includes("association")) {
-                        candidateNodes.push(child);
-                        this.log.success = false;
+
+            if (isDeclarationOp(child)) {
+                // Both 'defs not supported'/'multi-line template' (isImpossible())
+                // and 'decl in def' (isActual()) are invalid.
+                if (!isPossible(declTemplate)) {
+                    candidateNodes.push(child); // Push the decl operator for the error
+                    this.log.success = false;
+
+                    // Error messages - be precise
+                    if (additionalFeatures.includes("declaration")) {
                         this.log.output.push(
                             <Message type="error">
-                                Association operator found outside of a map (at end of `{candidateNodes.toString()}`)
+                                Declaration operator found outside of a block (at the end of `{candidateNodes.toString()}`)
                             </Message>
                         );
-                        return []; // No children
+                    } else if (isImpossible(declTemplate)) {
+                        this.log.output.push(
+                            <Message type="error">
+                                Multi-line sentence templates are not supported (`{candidateNodes.toString()}`)
+                            </Message>
+                        );
+                    } else {
+                        this.log.output.push(
+                            <Message type="error">
+                                Declaration operator found inside of another declaration's value (at end of `{candidateNodes.toString()}`)
+                            </Message>
+                        );
+                        this.log.output.push(
+                            <Message type="info">Declaration chaining is not supported.</Message>
+                        );
                     }
 
+                    return []; // Block/map content is malformed - no children
+                }
+
+                // Templates consisting of only placeholders are invalid
+                if (!candidateNodes.some(isSentenceFragment)) {
+                    this.log.success = false;
+                    this.log.output.push(
+                        <Message type="error">
+                            Sentence templates consists only of placeholders (`{candidateNodes.toString()}`)
+                        </Message>
+                    );
+                    return []; // Block/map content is malformed - no children
+                }
+
+                // Templates may only contain fragments and placeholders
+                else if (!candidateNodes.every(
+                    (node) => isSentenceFragment(node) || isPlaceholderOp(node)
+                )) {
+                    this.log.success = false;
+                    this.log.output.push(
+                        <Message type="error">
+                            Sentence templates must not consist only of placeholders (`{candidateNodes.toString()}`)
+                        </Message>
+                    );
+                    return []; // Block/map content is malformed - no children
+                }
+
+                declTemplate = candidateNodes;
+                candidateNodes = [];
+
+            } else if (isTerminator(child)) {
+                if (isAssociationOp(child)) {
                     isHardTerminator = true;
-                    // fallthrough
+                }
+                // Drop the soft terminator itself (ie. don't push it to candidate nodes)
+                terminateSentence(isHardTerminator);
 
-                case SoftTerminatorRepr:
-                    // Flush previous sentence (up to this point) to final children and drop the soft terminator
-                    terminateSentence(isHardTerminator);
-                    break;
-
-                // TODO: Deal with placeholders and declarations later (ie. mode switching).
-
-                default:
-                    candidateNodes.push(child);
+            } else {
+                // Otherwise, keep the input and continue
+                candidateNodes.push(child);
             }
         }
 
-        // The end of the sentence parsing context is another hard terminator,
+        // The end of the sentence parsing context is an implicit hard terminator,
         // but ignore it if we only just terminated the last sentence.
         if (candidateNodes.length > 0) terminateSentence(true);
 
