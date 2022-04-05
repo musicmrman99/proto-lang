@@ -30,6 +30,7 @@ class AssociationOperatorRepr extends Repr {
 
     length = () => 3;
 }
+
 class DeclarationOperatorRepr extends Repr {
     length = () => 1;
 }
@@ -101,7 +102,7 @@ class BlockRepr extends Repr {
     length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
 }
 
-// AssociationRepr - not sure what this will have yet
+// AssociationRepr - not needed, because they're put into the containing map
 
 class SentenceRepr extends Repr {
     constructor(ref, params) {
@@ -113,14 +114,6 @@ class SentenceRepr extends Repr {
     length = () => this.parts.reduce((accum, part) => accum + part.length(), 0);
 }
 
-class TemplateRepr extends Repr {
-    constructor(parts) {
-        super();
-        this.parts = parts;
-    }
-
-    length = () => this.parts.reduce((accum, part) => accum + part.length(), 0);
-}
 class DeclarationRepr extends Repr {
     constructor(template, ref) {
         super();
@@ -130,6 +123,31 @@ class DeclarationRepr extends Repr {
 
     length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
 }
+
+/* Utils
+-------------------- */
+
+// Values
+const isLiteral = (node) => (
+    [
+        NumberRepr,
+        StringRepr,
+        LogicalRepr,
+        MapRepr,
+        BlockRepr
+    ].includes(node.constructor)
+);
+const isParameter = (node) => node.constructor === ParameterRepr;
+const isValue = (node) => isLiteral(node) || isParameter(node);
+
+// Sentences
+const isArgument = (node) => node.constructor === ArgumentRepr;
+const isSentence = (node) => node.constructor === SentenceRepr;
+const isSentenceFragment = (node) => node.constructor === SentenceFragmentRepr;
+
+// Declarations
+const isPlaceholderOp = (node) => node.constructor === PlaceholderOperatorRepr;
+const isDeclarationOp = (node) => node.constructor === DeclarationOperatorRepr;
 
 /* Parser
 -------------------------------------------------- */
@@ -265,14 +283,17 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 new StringRepr("| + |")
             )
         ];
-        return this.parseSentenceContext(ctx);
+
+        let children = this.getNormalisedChildren(ctx);
+        return this.parseSentences(ctx, children, ["declaration"]);
     }
 
     parseSentenceExprContext = (ctx) => {
-        return this.parseSentenceContext(ctx);
+        let children = this.getNormalisedChildren(ctx);
+        return this.parseSentences(ctx, children, ["assocation"]);
     }
 
-    parseSentenceContext = (ctx) => {
+    getNormalisedChildren = (ctx) => {
         // Get raw children
         let children = this.visitChildren(ctx) // Expressions -> their values / representations
             .filter((child) => child != null); // Remove EOF, `{`, `}`, `[`, `]`, and dropped nodes
@@ -280,10 +301,6 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // Merge sentence fragments
         children = this.mergeSentenceFragments(children);
 
-        // Parse sentences and link
-        children = this.parseSentences(ctx, children);
-
-        // Return transformed children
         return children;
     }
 
@@ -319,39 +336,100 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         return newChildren;
     }
 
-    parseSentences = (ctx, children) => {
+    /**
+     * Parses all sentences and any additional features specified from the given
+     * children, given the context.
+     * 
+     * @param {Object} ctx The context object provided by ANTLR Runtime.
+     * @param {Array<Repr>} children The children to parse into sentences (and
+     *   other things).
+     * @param {Array<String>} additionalFeatures An array of strings indicating
+     *   which features in addition to sentences are allowed to be interpreted
+     *   in this context. The following features are supported:
+     *   - "declaration" - Parses any declarations it finds.
+     * @returns {Array<SentenceRepr|DeclarationRepr|LiteralRepr>}
+     */
+    parseSentences = (ctx, children, additionalFeatures) => {
         /*
-        The sentence parsing algorithm.
+        Details of the algorithm:
 
-        This uses a left-recursive longest-match algo, with constant precedence and
-        left associativity for all sentence definitions.
+        +--------------------------------------------------------------------------------------+
+        |                                    |                     Effect                      |
+        +              Symbol(s)             +-------------------------------------------------+
+        |                                    |          Expr          |          Decl          |
+        |--------------------------------------------------------------------------------------|
+        | fragment                           | buffer + continue      | buffer + continue      |
+        | number, string, logical, parameter | hard nesting           | ERROR                  |
+        | map, block                         | hard nesting           | ERROR                  |
+        | association operator               | hard terminator (expr) | ERROR                  |
+        | soft terminator                    | soft terminator        | ERROR                  |
+        | placeholder operator               | ERROR                  | placeholder            |
+        | declaration operator               | ERROR                  | hard terminator (decl) |
+        +--------------------------------------------------------------------------------------+
+
+        "Effect" Key
+        --------------------
+
+        Base:
+        - buffer + continue      - Add to the list of candidate nodes, then move to next token.
+        - hard nesting           - Must either appear on its own, or fit into a placeholder as
+                                   a sentence argument.
+        - soft terminator        - May terminate the sentence. If it doesn't, keep parsing.
+        - hard terminator (expr) - Must terminate the sentence and produce a SentenceRepr as a
+                                   new child of the current context. If it doesn't terminate
+                                   the sentence, then error.
+
+        Additional Features:
+        - hard terminator(decl) - Terminates the sentence template and produces a
+                                  DeclarationRepr. If the value/sentence after the declaration
+                                  point is incomplete or otherwise invalid, then error.
+                                  Requires the "declaration" additional feature.
+        - placeholder           - Represents itself. Requires the "declaration" additional
+                                  feature.
         */
-       
+
         const allDecls = this.getDeclarations(ctx);
         const finalChildren = [];
 
         // Set up variables and utilities
         let candidateNodes = [];
-        const terminateSentence = (hardTerminator) => {
+        const terminateSentence = (isHardTerminator) => {
             const sentence = this.parseSentence(candidateNodes, allDecls);
             if (sentence !== null) {
                 finalChildren.push(sentence);
-            } else if (hardTerminator) {
+            } else if (isHardTerminator) {
                 this.log.success = false;
-                this.log.output.push(<Message type="error">Incomplete Sentence: `{candidateNodes.toString()}`</Message>);
+                this.log.output.push(
+                    <Message type="error">
+                        Incomplete Sentence: `{candidateNodes.toString()}`
+                    </Message>
+                );
             }
             candidateNodes = [];
         }
 
         // Parse Children
         for (const child of children) {
-            let hardTerminator = false;
+            let isHardTerminator = false;
             switch (child.constructor) {
                 case AssociationOperatorRepr:
-                    hardTerminator = true; // fallthrough
+                    if (!additionalFeatures.includes("association")) {
+                        candidateNodes.push(child);
+                        this.log.success = false;
+                        this.log.output.push(
+                            <Message type="error">
+                                Association operator found outside of a map (at end of `{candidateNodes.toString()}`)
+                            </Message>
+                        );
+                        return []; // No children
+                    }
+
+                    isHardTerminator = true;
+                    // fallthrough
+
                 case SoftTerminatorRepr:
-                    // Flush previous sentence (up to this point) to final children
-                    terminateSentence(hardTerminator);
+                    // Flush previous sentence (up to this point) to final children and drop the soft terminator
+                    terminateSentence(isHardTerminator);
                     break;
 
                 // TODO: Deal with placeholders and declarations later (ie. mode switching).
@@ -369,26 +447,23 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         return finalChildren;
     }
 
-    // Try to create a sentence from the given set of nodes. Return null if the sentence is incomplete.
+    /**
+     * Try to create a SentenceRepr from the given set of nodes.
+     * 
+     * Return null if the sentence is incomplete.
+     * 
+     * @param {Array<Repr>} sentence The sentence to parse.
+     * @param {Array<DeclarationRepr>} allDecls An array containing all in-scope
+     *   declarations. Declaration templates must not contain only placeholders.
+     */
     parseSentence = (sentence, allDecls, indent = 0) => {
-        //              symbol(s)             |      expr mode         |       decl mode
-        // ------------------------------------------------------------------------------------
-        // fragment                           | continue               | continue
-        // number, string, logical, parameter | hard nesting           | ERROR
-        // map, block                         | hard nesting           | ERROR
-        // placeholder operator               | shift mode             > placeholder
-        // declaration operator               | shift mode             > V
-        //                                    |                        < hard terminator (decl)
-        // association operator               | hard terminator (expr) | ERROR
-        // soft terminator                    | soft terminator        | continue
-
         /*
-        IMPORTANT:
+        Key Points:
         - Top-level sentence must be terminated with a soft or hard terminator.
         - Top level sentence must match the entire node list and return ONE sentence, or null
-        - Sub-sentences may extend to anywhere in the node list
+        - Sub-sentences may extend to anywhere in the node list (and ambiguities must be resolved)
 
-        NOTE:
+        Notes:
         - This algorithm assumes that sentences that only include placeholders are disallowed.
         */
 
@@ -399,45 +474,45 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         log("Sentence: " + JSON.stringify(sentence));
 
-        // 1) If it's a literal, return it directly (no sentence parsing).
-        if (sentence.length === 1 && this.isLiteral(sentence[0])) {
+        // 1) If it's a value (literal or parameter), return it directly (no sentence parsing).
+        if (sentence.length === 1 && isValue(sentence[0])) {
             return sentence[0];
         }
 
         // 2) Get a list of all possible matches of a sentence template (as an array of
         //    [decl, [Repr, ...]] pairs), ignoring recursion.
         log("In-Scope Declarations:");
-        allDecls.forEach(decl => {
-            log("| "+JSON.stringify(decl.template));
-        });
+        allDecls.forEach(decl => log("| "+JSON.stringify(decl.template)));
 
         const sortedTemplateMatches = allDecls
-            // Merge the lists of template matches for each declaration while preserving the declaration
+            // Merge the lists of template matches for each declaration, while preserving the matched declaration
             .reduce((allSentenceCandidates, decl) => {
                 this.getAllTemplateMatches(sentence, decl.template).forEach(
-                    (sentenceCandidate) => allSentenceCandidates.push([decl, sentenceCandidate])
+                    sentenceCandidate => allSentenceCandidates.push([decl, sentenceCandidate])
                 );
                 return allSentenceCandidates;
             }, [])
             // Remove non-matching declarations
-            .filter(([_, sentence]) => sentence.length !== 0);
+            .filter(([_, sentenceCandidate]) => sentenceCandidate.length !== 0);
 
         // 3) For each sentence candidate, try to get a match. First match is the best match of this sentence.
         log("Match Declaration Candidates:");
-        for (const [decl, sentence] of sortedTemplateMatches) {
+        for (const [decl, sentenceCandidate] of sortedTemplateMatches) {
             // 3.1) Recursive Case: Try to parse each argument of the sentence (to get the
             //      best matching sub-sentence) to form a full sentence.
             let fullSentence = new SentenceRepr(decl.ref, []);
-            for (const node of sentence) {
+            for (const node of sentenceCandidate) {
                 if (node === null) {
                     fullSentence = null;
                     break;
 
-                } else if (this.isArgument(node)) {
+                } else if (isArgument(node)) {
                     const parsedSentence = this.parseSentence(node.children, allDecls, indent + 2);
                     if (parsedSentence !== null) {
                         fullSentence.params.push(parsedSentence)
 
+                    // If any argument could not be parsed (ie. had no matching sentence template),
+                    // then skip this sentence candidate.
                     } else {
                         fullSentence = null;
                         break;
@@ -446,7 +521,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             }
 
             // 3.2) If it makes a full sentence, return it (the first full sentence found wins)
-            if (this.isSentence(fullSentence)) {
+            if (isSentence(fullSentence)) {
                 log(JSON.stringify(decl.template) + " -- MATCH");
                 return fullSentence;
             } else {
@@ -457,19 +532,6 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // 4) Base Case: No matching sentence found
         return null;
     }
-
-    isArgument = (node) => node.constructor === ArgumentRepr;
-    isSentence = (node) => node.constructor === SentenceRepr;
-    isLiteral = (node) => (
-        [
-            NumberRepr,
-            StringRepr,
-            LogicalRepr,
-            ParameterRepr,
-            MapRepr,
-            BlockRepr
-        ].includes(node.constructor)
-    );
 
     /**
     Match the given sentence to the given template.
@@ -532,9 +594,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // If template contains a fragment as the first (possibly only) node, then deal with it and slice it off
         // to align the remaining sentence to (placeholder, fragment) pairs. The last item being a placeholder
         // is dealt with in the next section.
-        if (this.isSentenceFragment(templateNode)) {
+        if (isSentenceFragment(templateNode)) {
             // 3.1) Fail if not a sentence fragment (as it cannot match the template fragment)
-            if (!this.isSentenceFragment(sentenceNode)) return matches; // Ie. return empty array
+            if (!isSentenceFragment(sentenceNode)) return matches; // Ie. return empty array
 
             // 3.2) Attempt to match the first template fragment
             const newInitSentenceFragments = this.spliceTemplateFragment(
@@ -623,10 +685,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Update sentence/template node variables
             sentenceNode = sentence[sentenceInfo.nodeIndex];
             templateNode = template[1]; // The fragment
-            sentenceInfo.strIndex = this.isSentenceFragment(sentenceNode) ? 0 : null;
+            sentenceInfo.strIndex = isSentenceFragment(sentenceNode) ? 0 : null;
 
             // 5.1) If not a sentence fragment, it cannot match the template fragment, so skip it.
-            if (!this.isSentenceFragment(sentenceNode)) {
+            if (!isSentenceFragment(sentenceNode)) {
                 sentenceInfo.nodeIndex++;
                 continue;
             }
@@ -729,9 +791,6 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             new SentenceFragmentRepr(sentenceNode.content.substring(matchPos + templateNode.content.length))
         ];
     }
-
-    isPlaceholder = (node) => node.constructor === PlaceholderOperatorRepr;
-    isSentenceFragment = (node) => node.constructor === SentenceFragmentRepr;
 
     // Return a flattened object containing a mapping of all sentence template
     // declarations in the given lexical scope (context) to their bound ref objects.
