@@ -590,7 +590,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             return sentence[0];
         }
 
-        // 2) Get a list of all possible matches of a sentence template (as an array of
+        // 1) Get a list of all possible matches of a sentence template (as an array of
         //    [decl, [Repr, ...]] pairs), ignoring recursion.
         log("In-Scope Declarations:");
         allDecls.forEach(decl => log(decl.toString()));
@@ -606,10 +606,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Remove non-matching declarations
             .filter(([_, sentenceCandidate]) => sentenceCandidate.length !== 0);
 
-        // 3) For each sentence candidate, try to get a match. First match is the best match of this sentence.
+        // 2) For each sentence candidate, try to get a match. First match is the best match of this sentence.
         log("Match Against Declarations:");
         for (const [decl, sentenceCandidate] of sortedTemplateMatches) {
-            // 3.1) Recursive Case: Try to parse each argument of the sentence (to get the
+            // 2.1) Recursive Case: Try to parse each argument of the sentence (to get the
             //      best matching sub-sentence) to form a full sentence.
             let fullSentence = new SentenceRepr(decl.ref, []);
             for (const node of sentenceCandidate) {
@@ -631,7 +631,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 }
             }
 
-            // 3.2) If it makes a full sentence, return it (the first full sentence found wins)
+            // 2.2) If it makes a full sentence, return it (the first full sentence found wins)
             if (isSentence(fullSentence)) {
                 log(decl + " -- MATCH");
                 return fullSentence;
@@ -640,7 +640,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             }
         }
 
-        // 4) Base Case: No matching sentence found
+        // 3) Base Case: No matching sentence found
         return null;
     }
 
@@ -740,9 +740,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 // Continue checking for this fragment
             matches.push(
                 ...this.getAllTemplateMatches(
-                    remainingNodes,              // Check the remaining sentence nodes
-                    template.slice(),            // Keep looking for the same template fragment
-                    { nodeIndex: 0, nodePos: 0 } // Check from the beginning of the remaining sentence nodes
+                    sentence,                     // Continue checking the entire sentence ...
+                    template.slice(),             // Keep looking for the same template fragment
+                    { nodeIndex: 0, strIndex: 0 } // ... but check from the next position, not the start
                 ).map(
                     (match) => [templateNode, ...match] // Prepend the matched fragment to every sub-match
                 )
@@ -791,7 +791,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         */
 
         // Keep consuming input until the first fragment match
-        let newInitSentenceFragments = null;
+        let sentenceSplice = null;
         while (sentenceInfo.nodeIndex < sentence.length) {
             // Update sentence/template node variables
             sentenceNode = sentence[sentenceInfo.nodeIndex];
@@ -805,12 +805,12 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             }
 
             // 5.2) Attempt to match the next template fragment
-            newInitSentenceFragments = this.spliceTemplateFragment(
+            sentenceSplice = this.spliceTemplateFragment(
                 templateNode, sentenceNode, sentenceInfo.strIndex
             );
 
             // 5.3) If no match, iterate to next sentence node; if found a match, continue out of the loop.
-            if (newInitSentenceFragments === null) {
+            if (sentenceSplice === null) {
                 sentenceInfo.nodeIndex++;
                 continue;
             } else {
@@ -819,10 +819,15 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         }
 
         // 5.4) Fail if there were no matches in the rest of the sentence
-        if (newInitSentenceFragments === null) return matches;
+        if (sentenceSplice === null) return matches;
 
         // 5.5) Reorganise the sentence into the consumed part and the remaining part
-        const [initialSentenceFragment, remainingSentenceFragment] = newInitSentenceFragments;
+        const [
+            initialSentenceFragment,
+            remainingSentenceFragment,
+            ,
+            remainingStart
+        ] = sentenceSplice;
 
         const consumedNodes = [
             ...sentence.slice(0, sentenceInfo.nodeIndex), // Every node before this fragment node,
@@ -833,12 +838,21 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             )
         ];
 
+        // These are needed for the first part of the binary fork
+        let nextNodeIndex = sentenceInfo.nodeIndex;
+        let nextStrIndex = remainingStart;
+
+        // The part of the fragment after the template fragment match, if not empty
+        let remainingSentenceFragmentList = []; // Exclude remaining fragment if it has no content
+        if (remainingSentenceFragment.content !== "") {
+            remainingSentenceFragmentList = [remainingSentenceFragment];
+        } else {
+            // If we've reached the end of the fragment, start at the next node
+            nextNodeIndex++;
+            nextStrIndex = 0;
+        }
         const remainingNodes = [
-            ...(                                           // The part of the fragment after the template fragment match if not empty,
-                remainingSentenceFragment.content !== "" ?
-                    [remainingSentenceFragment] :
-                    [] // Exclude remaining fragment if it has no content
-            ),
+            ...remainingSentenceFragmentList,
             ...sentence.slice(sentenceInfo.nodeIndex + 1)  // Every node after this fragment node
         ];
 
@@ -859,12 +873,12 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Continue checking for this fragment
         matches.push(
             ...this.getAllTemplateMatches(
-                remainingNodes,              // Check the remaining sentence nodes
-                template.slice(),            // Keep looking for the same template fragment
-                { nodeIndex: 0, nodePos: 0 } // Check from the beginning of the remaining sentence nodes
-            ).map(
-                // eslint-disable-next-line no-loop-func -- the closure over templateNode is never used outside or across iterations of the loop
-                (match) => [argument, templateNode, ...match] // Prepend the matched argument and fragment to every sub-match
+                sentence, // Check the remaining sentence nodes
+                template, // Keep looking for the same template fragment
+                {         // Check from the beginning of the remaining sentence nodes
+                    nodeIndex: nextNodeIndex,
+                    strIndex: nextStrIndex
+                }
             )
         );
 
@@ -874,9 +888,13 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 remainingNodes,               // Check the remaining sentence nodes
                 template.slice(2),            // Slice off the matched template placeholder and fragment
                 { nodeIndex: 0, strIndex: 0 } // Check from the beginning of the remaining sentence nodes
-            ).map(
+            ).reduce(
                 // eslint-disable-next-line no-loop-func -- the closure over templateNode is never used outside or across iterations of the loop
-                (match) => [argument, templateNode, ...match] // Prepend the matched fragment to every sub-match
+                (accum, match) => {
+                    accum.push([argument, templateNode, ...match]); // Prepend the matched fragment to every sub-match
+                    return accum;
+                },
+                []
             )
         );
 
@@ -899,7 +917,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // Splice out the matching part
         return [
             new SentenceFragmentRepr(sentenceNode.content.substring(0, matchPos)),
-            new SentenceFragmentRepr(sentenceNode.content.substring(matchPos + templateNode.content.length))
+            new SentenceFragmentRepr(sentenceNode.content.substring(matchPos + templateNode.content.length)),
+            matchPos,
+            matchPos + templateNode.content.length
         ];
     }
 
@@ -914,22 +934,4 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         if (ctx.decls != null) decls.push(...ctx.decls);        // Then, if a namespace yourself, add your decls (possibly hiding parent decls).
         return decls;
     }
-
-    /* Utils
-    -------------------------------------------------- */
-
-    //
-
-    /*
-    Remaining:
-
-  | map_literal
-  | block_literal
-
-    association_operator (map only)
-  | declaration_operator
-  | placeholder_operator
-
-  | sentence_fragment
-    */
 }
