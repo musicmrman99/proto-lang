@@ -451,7 +451,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
          * so, flush the sentence to final children.
          */
         const terminateSentence = (isHardTerminator) => {
-            const sentence = this.parseSentence(candidateNodes, outerDecls.concat(ctx.decls));
+            const sentence = this.parseSentence(candidateNodes, outerDecls.concat(ctx.decls != null ? ctx.decls : []));
             if (sentence !== null) {
                 if (isActual(declTemplate)) {
                     const decl = new DeclarationRepr(declTemplate, sentence);
