@@ -2,8 +2,15 @@ import Message from '../components/utils/Message';
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
 // Util
-const nodesStr = (nodes) => "["+nodes.map(child => child.toString()).join("")+"]";
-const nodesStrList = (nodes) => "["+nodes.map(child => child.toString()).join(", ")+"]";
+const _nodesStr = (nodes, join) => {
+    if (nodes == null) return "[]";
+    return "["+nodes.map(child => {
+        if (child == null) return "NULL_NODE";
+        return child.toString();
+    }).join(join)+"]";
+}
+const nodesStr = (nodes) => _nodesStr(nodes, "");
+const nodesStrList = (nodes) => _nodesStr(nodes, ", ");
 
 /* Representations
 -------------------------------------------------- */
@@ -22,13 +29,13 @@ class SentenceFragmentRepr extends Repr {
     length = () => this.content.length;
     toString = () => this.content;
 }
-const isSentenceFragment = (node) => node.constructor === SentenceFragmentRepr;
+const isSentenceFragment = (node) => node != null && node.constructor === SentenceFragmentRepr;
 
 class SoftTerminatorRepr extends Repr {
     length = () => 0;
     toString = () => "¶";
 }
-const isSoftTerminator = (node) => node.constructor === SoftTerminatorRepr;
+const isSoftTerminator = (node) => node != null && node.constructor === SoftTerminatorRepr;
 
 class AssociationOperatorRepr extends Repr {
     constructor(relation, remove) {
@@ -44,19 +51,19 @@ class AssociationOperatorRepr extends Repr {
         (this.relation.right ? ">" : "-")
     )
 }
-const isAssociationOp = (node) => node.constructor === AssociationOperatorRepr;
+const isAssociationOp = (node) => node != null && node.constructor === AssociationOperatorRepr;
 
 class DeclarationOperatorRepr extends Repr {
     length = () => 1;
     toString = () => " : "
 }
-const isPlaceholderOp = (node) => node.constructor === PlaceholderOperatorRepr;
+const isPlaceholderOp = (node) => node != null && node.constructor === PlaceholderOperatorRepr;
 
 class PlaceholderOperatorRepr extends Repr {
     length = () => 1;
     toString = () => "|"
 }
-const isDeclarationOp = (node) => node.constructor === DeclarationOperatorRepr;
+const isDeclarationOp = (node) => node != null && node.constructor === DeclarationOperatorRepr;
 
 // Used to represent arguments to a sentence template, ie. the
 // values (or possibly sub-sentences) that fill in placeholders.
@@ -71,7 +78,7 @@ class ArgumentRepr extends Repr {
         "{ ARGUMENT: content: "+nodesStr(this.children)+" }"
     )
 }
-const isArgument = (node) => node.constructor === ArgumentRepr;
+const isArgument = (node) => node != null && node.constructor === ArgumentRepr;
 
 /* Final Representations
 -------------------- */
@@ -94,7 +101,7 @@ class SentenceRepr extends Repr {
         ") }"
     ].join("");
 }
-const isSentence = (node) => node.constructor === SentenceRepr;
+const isSentence = (node) => node != null && node.constructor === SentenceRepr;
 
 class DeclarationRepr extends Repr {
     constructor(template, ref) {
@@ -106,7 +113,7 @@ class DeclarationRepr extends Repr {
     length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
     toString = () => "{ DECLARE: "+this.template.map(item => item.toString()).join("")+" }";
 }
-const isDeclaration = (node) => node.constructor === DeclarationRepr;
+const isDeclaration = (node) => node != null && node.constructor === DeclarationRepr;
 
 // Literals + Parameter
 
@@ -150,7 +157,7 @@ class ParameterRepr extends Repr {
     length = () => 1 + this.index.toString().length + this.extraction.length();
     toString = () => "@" + this.index.toString() + this.extraction.toString();
 }
-const isParameter = (node) => node.constructor === ParameterRepr;
+const isParameter = (node) => node != null && node.constructor === ParameterRepr;
 
 class MapRepr extends Repr {
     constructor(children) {
@@ -179,7 +186,7 @@ class BlockRepr extends Repr {
     };
 }
 
-const isLiteral = (node) => (
+const isLiteral = (node) => node != null && (
     [
         NumberRepr,
         StringRepr,
@@ -195,7 +202,7 @@ const isLiteral = (node) => (
 const isValue = (node) => isLiteral(node) || isParameter(node);
 const isTerminator = (node) => isSoftTerminator(node) || isAssociationOp(node);
 
-const nodeListToString = (nodes) => "NODE_LIST"+nodesStrList(nodes);
+const nodeListToString = (nodes) => "NODE_LIST" + nodesStrList(nodes);
 
 /* Parser
 -------------------------------------------------- */
