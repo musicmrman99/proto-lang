@@ -1,214 +1,7 @@
 import Message from '../components/utils/Message';
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
-// Util
-const _nodesStr = (nodes, join) => {
-    if (nodes == null) return "[]";
-    return "["+nodes.map(child => {
-        if (child == null) return "NULL_NODE";
-        return child.toString();
-    }).join(join)+"]";
-}
-const nodesStr = (nodes) => _nodesStr(nodes, "");
-const nodesStrList = (nodes) => _nodesStr(nodes, ", ");
-
-/* Representations
--------------------------------------------------- */
-
-class Repr {}
-
-/* Intermediate Representations
--------------------- */
-
-class SentenceFragmentRepr extends Repr {
-    constructor(content) {
-        super();
-        this.content = content;
-    }
-
-    length = () => this.content.length;
-    toString = () => this.content;
-}
-const isSentenceFragment = (node) => node != null && node.constructor === SentenceFragmentRepr;
-
-class SoftTerminatorRepr extends Repr {
-    length = () => 0;
-    toString = () => "¶";
-}
-const isSoftTerminator = (node) => node != null && node.constructor === SoftTerminatorRepr;
-
-class AssociationOperatorRepr extends Repr {
-    constructor(relation, remove) {
-        super();
-        this.relation = relation;
-        this.remove = remove;
-    }
-
-    length = () => 3;
-    toString = () => (
-        (this.relation.leftDir ? "<" : "-") +
-        (this.remove ? "/" : "-") +
-        (this.relation.right ? ">" : "-")
-    )
-}
-const isAssociationOp = (node) => node != null && node.constructor === AssociationOperatorRepr;
-
-class DeclarationOperatorRepr extends Repr {
-    length = () => 1;
-    toString = () => " : "
-}
-const isPlaceholderOp = (node) => node != null && node.constructor === PlaceholderOperatorRepr;
-
-class PlaceholderOperatorRepr extends Repr {
-    length = () => 1;
-    toString = () => "|"
-}
-const isDeclarationOp = (node) => node != null && node.constructor === DeclarationOperatorRepr;
-
-// Used to represent arguments to a sentence template, ie. the
-// values (or possibly sub-sentences) that fill in placeholders.
-class ArgumentRepr extends Repr {
-    constructor(children = []) {
-        super();
-        this.children = children;
-    }
-
-    length = () => this.children.length;
-    toString = () => (
-        "{ ARGUMENT: content: "+nodesStr(this.children)+" }"
-    )
-}
-const isArgument = (node) => node != null && node.constructor === ArgumentRepr;
-
-/* Final Representations
--------------------- */
-
-// AssociationRepr - not needed, because they're put into the containing map
-
-// Sentence + Declaration
-
-class SentenceRepr extends Repr {
-    constructor(ref, params) {
-        super();
-        this.ref = ref;
-        this.params = params;
-    }
-
-    length = () => this.parts.reduce((accum, part) => accum + part.length(), 0);
-    toString = () => [
-        "{ SENTENCE (ref: ",
-        this.ref.toString(),
-        ") }"
-    ].join("");
-}
-const isSentence = (node) => node != null && node.constructor === SentenceRepr;
-
-class DeclarationRepr extends Repr {
-    constructor(template, ref) {
-        super();
-        this.template = template;
-        this.ref = ref;
-    }
-
-    length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
-    toString = () => "{ DECLARE: "+this.template.map(item => item.toString()).join("")+" }";
-}
-const isDeclaration = (node) => node != null && node.constructor === DeclarationRepr;
-
-// Literals + Parameter
-
-class NumberRepr extends Repr {
-    constructor(value) {
-        super();
-        this.value = value;
-    }
-
-    length = () => this.value.toString().length;
-    toString = () => this.value.toString();
-}
-
-class StringRepr extends Repr {
-    constructor(value) {
-        super();
-        this.value = value;
-    }
-    
-    length = () => this.value.length + 2; // for the quotes
-    toString = () => '"'+this.value.toString()+'"';
-}
-
-class LogicalRepr extends Repr {
-    constructor(value) {
-        super();
-        this.value = value;
-    }
-
-    length = () => this.value.toString().length;
-    toString = () => this.value.toString();
-}
-
-class ParameterRepr extends Repr {
-    constructor(index, extraction) {
-        super();
-        this.index = index;
-        this.extraction = extraction;
-    }
-
-    length = () => 1 + this.index.toString().length + this.extraction.length();
-    toString = () => "@" + this.index.toString() + this.extraction.toString();
-}
-const isParameter = (node) => node != null && node.constructor === ParameterRepr;
-
-class MapRepr extends Repr {
-    constructor(children) {
-        super();
-        this.parent = null;
-        this.children = children;
-    }
-
-    length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
-    toString = () => "["+this.children.map(child => child.toString()).join("")+"]";
-}
-const isMap = (node) => node != null && node.constructor === MapRepr;
-
-class BlockRepr extends Repr {
-    constructor(children) {
-        super();
-        this.parent = null;
-        this.children = children;
-        this.decls = [];
-    }
-
-    length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
-    toString = () => {
-        const numDeclarations = this.decls.length;
-        const numSentences = this.children.filter(isSentence).length;
-        const declarations = numDeclarations === 1 ? numDeclarations+" declaration" : numDeclarations+" declarations";
-        const sentences = numSentences === 1 ? numSentences+" sentence" : numSentences+" sentences";
-        return `{ BLOCK (${declarations}, ${sentences}) }`;
-    };
-}
-const isBlock = (node) => node != null && node.constructor === BlockRepr;
-
-const isLiteral = (node) => node != null && (
-    [
-        NumberRepr,
-        StringRepr,
-        LogicalRepr,
-        MapRepr,
-        BlockRepr
-    ].includes(node.constructor)
-);
-
-/* Composite Utils
--------------------- */
-
-const isValue = (node) => isLiteral(node) || isParameter(node);
-const isNestable = (node) => isMap(node) || isBlock(node) || isParameter(node);
-const isTerminator = (node) => isSoftTerminator(node) || isAssociationOp(node);
-const hasDeclarations = (node) => isBlock(node);
-
-const nodeListToString = (nodes) => "NODE_LIST" + nodesStrList(nodes);
+import { repr, is, format } from './Representations';
 
 /* Parser
 -------------------------------------------------- */
@@ -247,23 +40,23 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 	visitNumber_literal = (ctx) => {
         const [whole, frac] = ctx.INT_LITERAL();
         const point = ctx.DECIMAL_POINT();
-        return new NumberRepr(parseFloat(
+        return new repr.Number(parseFloat(
             whole.getText() +
             (point != null ? point.getText() : "") +
             (frac != null ? frac.getText() : "")
         ));
     }
-	visitString_literal = (ctx) => new StringRepr(ctx.STRING_LITERAL().getText().slice(1, -1)); // Remove the quotes
-	visitLogical_literal = (ctx) => new LogicalRepr(ctx.LOGICAL_LITERAL().getText() === "true");
+	visitString_literal = (ctx) => new repr.String(ctx.STRING_LITERAL().getText().slice(1, -1)); // Remove the quotes
+	visitLogical_literal = (ctx) => new repr.Logical(ctx.LOGICAL_LITERAL().getText() === "true");
 
     // Translate parameters into their AST representation
     // Note: Like basic literals, parameters can appear anywhere
     visitParameter = (ctx) => {
         const index = ctx.parameter_index();
         const extraction = ctx.parameter_extraction();
-        return new ParameterRepr(
+        return new repr.Parameter(
             index != null ? parseInt(index.getText()) : 1,
-            extraction != null ? this.visitMap_literal(extraction.map_literal()) : new MapRepr([])
+            extraction != null ? this.visitMap_literal(extraction.map_literal()) : new repr.Map([])
         );
     }
 
@@ -274,11 +67,11 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     // into their pre-sentence parsing AST representations.
 
         // Type.SENTENCE has a `ref` too (and its `content` is different)
-    visitSentence_fragment = (ctx) => new SentenceFragmentRepr(ctx.getText());
+    visitSentence_fragment = (ctx) => new repr.SentenceFragment(ctx.getText());
         // Type.DECLARATION has a `template` and `ref` too
-    visitDeclaration_operator = () => new DeclarationOperatorRepr();
-    visitPlaceholder_operator = () => new PlaceholderOperatorRepr();
-    visitAssociation_operator = (ctx) => new AssociationOperatorRepr(
+    visitDeclaration_operator = () => new repr.DeclarationOperator();
+    visitPlaceholder_operator = () => new repr.PlaceholderOperator();
+    visitAssociation_operator = (ctx) => new repr.AssociationOperator(
         // Relation
         {
             // List all of them, as the symbols might change in future in a way
@@ -302,7 +95,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     -------------------- */
 
     // Translate newline -> SOFT_TERMINATOR
-    visitNewline = () => new SoftTerminatorRepr();
+    visitNewline = () => new repr.SoftTerminator();
 
     // Program (entry point) and Compound Literals
     visitProgram = (ctx) => {
@@ -315,7 +108,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // no sentence definitions to be available in nested nodes (blocks/maps).
         // 
         // This is one way of implementing lexical clojures, as refs are bound to the
-        // block's child SentenceReprs at the site of creation, and may come from outer
+        // block's child Sentences at the site of creation, and may come from outer
         // scopes.
         this.parseSentences(root);
         return root;
@@ -327,17 +120,17 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     -------------------- */
 
     parseBlock = (ctx) => {
-        const parent = new BlockRepr([]);
+        const parent = new repr.Block([]);
         parent.decls = [];
         parent.children = this.getNormalisedChildren(ctx);
-        parent.children.filter(isNestable).forEach((child) => child.parent = parent);
+        parent.children.filter(is.nestable).forEach((child) => child.parent = parent);
         return parent;
     }
 
     parseMap = (ctx) => {
-        const parent = new MapRepr([]);
+        const parent = new repr.Map([]);
         parent.children = this.getNormalisedChildren(ctx);
-        parent.children.filter(isNestable).forEach((child) => child.parent = parent);
+        parent.children.filter(is.nestable).forEach((child) => child.parent = parent);
         return parent;
     }
 
@@ -361,7 +154,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         let mergedSentenceFragment = [];
         const pushMergedSentenceFragment = () => {
             if (mergedSentenceFragment.length > 0) {
-                newChildren.push(new SentenceFragmentRepr(
+                newChildren.push(new repr.SentenceFragment(
                     mergedSentenceFragment
                         .map((sentenceFragment) => sentenceFragment.content)
                         .join("")
@@ -372,7 +165,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         // Merge adjacent sentence fragments
         for (const child of children) {
-            if (child instanceof SentenceFragmentRepr) {
+            if (child instanceof repr.SentenceFragment) {
                 mergedSentenceFragment.push(child);
             } else {
                 pushMergedSentenceFragment();
@@ -388,7 +181,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
      * Parses all sentences and any additional features relevant to the node
      * type from the children.
      * 
-     * @param {MapRepr|BlockRepr} nestableNode The representation of the nestable
+     * @param {repr.Map|repr.Block} nestableNode The representation of the nestable
      *   node in which to parse sentences. Its children will be replaced by the
      *   parsed sentences.
      */
@@ -418,14 +211,14 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         - hard nesting      - Must either appear on its own, or fit into a placeholder as
                               a sentence argument.
         - soft terminator   - May terminate the sentence. If it doesn't, keep parsing.
-        - hard terminator   - Must terminate the sentence and produce a SentenceRepr as a
+        - hard terminator   - Must terminate the sentence and produce a Sentence as a
                               new child of the current context. If it doesn't terminate
                               the sentence, then error.
 
         Additional Features:
-        - terminator (decl) - Terminates the sentence template and produces a
-                              DeclarationRepr. If the value/sentence after the declaration
-                              point is incomplete or otherwise invalid, then error.
+        - terminator (decl) - Terminates the sentence template and produces a Declaration.
+                              If the value/sentence after the declaration point is
+                              incomplete or otherwise invalid, then error.
                               Requires the "declaration" additional feature.
         - placeholder       - Represents itself. Requires the "declaration" additional
                               feature.
@@ -437,8 +230,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // Value is:
         // - true if a declaration operator is allowed next.
         // - false if a declaration operator is not allowed next.
-        // - a DeclarationRepr if next complete sentence is the value of a decl.
-        let declTemplate = hasDeclarations(nestableNode);
+        // - a repr.Declaration if next complete sentence is the value of a decl.
+        let declTemplate = is.hasDeclarations(nestableNode);
 
         // Utility for the previous one. If it's not boolean, then it must be the
         // relevant Repr.
@@ -466,7 +259,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             const sentence = this.parseSentence(candidateNodes, outerDecls.concat(nestableNode.decls != null ? nestableNode.decls : []));
             if (sentence !== null) {
                 if (isActual(declTemplate)) {
-                    const decl = new DeclarationRepr(declTemplate, sentence);
+                    const decl = new repr.Declaration(declTemplate, sentence);
                     nestableNode.decls.push(decl);
                     declTemplate = true;
 
@@ -480,7 +273,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
                 // Parse nested nodes (recurse into non-nestable child nodes as needed).
                 //
-                // Doing it here - after the DeclarationRepr has been added to this namespace,
+                // Doing it here - after the Declaration has been added to this namespace,
                 // and not during sentence parsing - makes this language support recursive
                 // blocks without faffing with mutable maps.
                 // 
@@ -496,7 +289,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 this.log.success = false;
                 this.log.output.push(
                     <Message type="error">
-                        Incomplete Sentence: {nodeListToString(candidateNodes)}
+                        Incomplete Sentence: {format.nodeListToString(candidateNodes)}
                     </Message>
                 );
             }
@@ -506,7 +299,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         for (const child of nestableNode.children) {
             let isHardTerminator = false;
 
-            if (isDeclarationOp(child)) {
+            if (is.declarationOp(child)) {
                 // Both 'defs not supported'/'multi-line template' (isImpossible())
                 // and 'decl in def' (isActual()) are invalid.
                 if (!isPossible(declTemplate)) {
@@ -514,22 +307,22 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                     this.log.success = false;
 
                     // Error messages - be precise
-                    if (!hasDeclarations(nestableNode)) {
+                    if (!is.hasDeclarations(nestableNode)) {
                         this.log.output.push(
                             <Message type="error">
-                                Declaration operator found outside of a block (at the end of {nodeListToString(candidateNodes)})
+                                Declaration operator found outside of a block (at the end of {format.nodeListToString(candidateNodes)})
                             </Message>
                         );
                     } else if (isImpossible(declTemplate)) {
                         this.log.output.push(
                             <Message type="error">
-                                Multi-line sentence templates are not supported ({nodeListToString(candidateNodes)})
+                                Multi-line sentence templates are not supported ({format.nodeListToString(candidateNodes)})
                             </Message>
                         );
                     } else {
                         this.log.output.push(
                             <Message type="error">
-                                Declaration operator found inside of another declaration's value (at end of {nodeListToString(candidateNodes)})
+                                Declaration operator found inside of another declaration's value (at end of {format.nodeListToString(candidateNodes)})
                             </Message>
                         );
                         this.log.output.push(
@@ -541,11 +334,11 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 }
 
                 // Templates consisting of only placeholders are invalid
-                if (!candidateNodes.some(isSentenceFragment)) {
+                if (!candidateNodes.some(is.sentenceFragment)) {
                     this.log.success = false;
                     this.log.output.push(
                         <Message type="error">
-                            Sentence templates consists only of placeholders ({nodeListToString(candidateNodes)})
+                            Sentence templates consists only of placeholders ({format.nodeListToString(candidateNodes)})
                         </Message>
                     );
                     return []; // Block/map content is malformed - no children
@@ -553,12 +346,12 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
                 // Templates may only contain fragments and placeholders
                 else if (!candidateNodes.every(
-                    (node) => isSentenceFragment(node) || isPlaceholderOp(node)
+                    (node) => is.sentenceFragment(node) || is.placeholderOp(node)
                 )) {
                     this.log.success = false;
                     this.log.output.push(
                         <Message type="error">
-                            Sentence templates must not consist only of placeholders ({nodeListToString(candidateNodes)})
+                            Sentence templates must not consist only of placeholders ({format.nodeListToString(candidateNodes)})
                         </Message>
                     );
                     return []; // Block/map content is malformed - no children
@@ -567,8 +360,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 declTemplate = candidateNodes;
                 candidateNodes = [];
 
-            } else if (isTerminator(child)) {
-                if (isAssociationOp(child)) isHardTerminator = true;
+            } else if (is.terminator(child)) {
+                if (is.associationOp(child)) isHardTerminator = true;
 
                 // Drop the soft terminator itself (ie. don't push it to candidate nodes)
 
@@ -605,16 +398,16 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         //       because it's related to high-level processing of nodes.
 
         // Base case
-        if (isNestable(node)) {
+        if (is.nestable(node)) {
             let nestableNode = node;
             // A parameter has-a Map, not is-a Map, so special-case it
-            if (isParameter(node)) nestableNode = node.extraction;
+            if (is.parameter(node)) nestableNode = node.extraction;
 
             this.parseSentences(nestableNode);
         }
 
         // Recursive case
-        if (isSentence(node)) {
+        if (is.sentence(node)) {
             for (const param of node.params) {
                 this.parseNestedNodes(param);
             }
@@ -624,12 +417,12 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     }
 
     /**
-     * Try to create a SentenceRepr from the given set of nodes.
+     * Try to create a Sentence from the given set of nodes.
      * 
      * Return null if the sentence is incomplete.
      * 
      * @param {Array<Repr>} sentence The sentence to parse.
-     * @param {Array<DeclarationRepr>} allDecls An array containing all in-scope
+     * @param {Array<repr.Declaration>} allDecls An array containing all in-scope
      *   declarations. Declaration templates must not contain only placeholders.
      */
     parseSentence = (sentence, allDecls, indent = 0) => {
@@ -648,10 +441,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             this.log.output.push(<Message type="info">{indentStr}{message}</Message>);
         };
 
-        log("Parse Sentence: " + nodeListToString(sentence));
+        log("Parse Sentence: " + format.nodeListToString(sentence));
 
         // 1) If it's a value (literal or parameter), return it directly (no sentence parsing).
-        if (sentence.length === 1 && isValue(sentence[0])) {
+        if (sentence.length === 1 && is.value(sentence[0])) {
             return sentence[0];
         }
 
@@ -676,13 +469,13 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         for (const [decl, sentenceCandidate] of sortedTemplateMatches) {
             // 2.1) Recursive Case: Try to parse each argument of the sentence (to get the
             //      best matching sub-sentence) to form a full sentence.
-            let fullSentence = new SentenceRepr(decl.ref, []);
+            let fullSentence = new repr.Sentence(decl.ref, []);
             for (const node of sentenceCandidate) {
                 if (node === null) {
                     fullSentence = null;
                     break;
 
-                } else if (isArgument(node)) {
+                } else if (is.argument(node)) {
                     const parsedSentence = this.parseSentence(node.children, allDecls, indent + 2);
                     if (parsedSentence !== null) {
                         fullSentence.params.push(parsedSentence)
@@ -697,7 +490,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             }
 
             // 2.2) If it makes a full sentence, return it (the first full sentence found wins)
-            if (isSentence(fullSentence)) {
+            if (is.sentence(fullSentence)) {
                 log(decl + " -- MATCH");
                 return fullSentence;
             } else {
@@ -770,9 +563,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // If template contains a fragment as the first (possibly only) node, then deal with it and slice it off
         // to align the remaining sentence to (placeholder, fragment) pairs. The last item being a placeholder
         // is dealt with in the next section.
-        if (isSentenceFragment(templateNode)) {
+        if (is.sentenceFragment(templateNode)) {
             // 3.1) Fail if not a sentence fragment (as it cannot match the template fragment)
-            if (!isSentenceFragment(sentenceNode)) return matches; // Ie. return empty array
+            if (!is.sentenceFragment(sentenceNode)) return matches; // Ie. return empty array
 
             // 3.2) Attempt to match the first template fragment
             const newInitSentenceFragments = this.spliceTemplateFragment(
@@ -858,7 +651,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             const remainingNodes = sentence.slice(sentenceInfo.nodeIndex);
             const remainingNodesLength = remainingNodes.reduce((accum, node) => accum + node.length(), 0)
             if (remainingNodesLength >= 1) {
-                matches.push([new ArgumentRepr(remainingNodes)]);
+                matches.push([new repr.Argument(remainingNodes)]);
             }
             return matches;
         }
@@ -881,10 +674,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Update sentence/template node variables
             sentenceNode = sentence[sentenceInfo.nodeIndex];
             templateNode = template[1]; // The fragment
-            sentenceInfo.strIndex = isSentenceFragment(sentenceNode) ? 0 : null;
+            sentenceInfo.strIndex = is.sentenceFragment(sentenceNode) ? 0 : null;
 
             // 5.1) If not a sentence fragment, it cannot match the template fragment, so skip it.
-            if (!isSentenceFragment(sentenceNode)) {
+            if (!is.sentenceFragment(sentenceNode)) {
                 sentenceInfo.nodeIndex++;
                 continue;
             }
@@ -948,7 +741,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         }
 
         // 5.7) Construct Repr for this placeholder match
-        const argument = new ArgumentRepr(consumedNodes);
+        const argument = new repr.Argument(consumedNodes);
 
         // 5.8) Base Case: Return sentence as it stands
         const remainingNodesLength = remainingNodes.reduce((accum, node) => accum + node.length(), 0);
@@ -1001,8 +794,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         // Splice out the matching part
         return [
-            new SentenceFragmentRepr(sentenceNode.content.substring(0, matchPos)),
-            new SentenceFragmentRepr(sentenceNode.content.substring(matchPos + templateNode.content.length)),
+            new repr.SentenceFragment(sentenceNode.content.substring(0, matchPos)),
+            new repr.SentenceFragment(sentenceNode.content.substring(matchPos + templateNode.content.length)),
             matchPos,
             matchPos + templateNode.content.length
         ];
@@ -1016,8 +809,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         if (nestableNode == null) return [];
 
         // Recursive case
-        const decls = [...this.getDeclarations(nestableNode.parent)];         // Add decls of parent namespaces.
-        if (hasDeclarations(nestableNode)) decls.push(...nestableNode.decls); // Then, if a namespace yourself, add your decls (possibly hiding parent decls).
+        const decls = [...this.getDeclarations(nestableNode.parent)];            // Add decls of parent namespaces.
+        if (is.hasDeclarations(nestableNode)) decls.push(...nestableNode.decls); // Then, if a namespace yourself, add your decls (possibly hiding parent decls).
         return decls;
     }
 }

@@ -6,6 +6,8 @@ import jsonschema from 'json-schema';
 import { Tabs, Tab } from "./utils/Tabs";
 import Message from "./utils/Message";
 
+import { is } from "../lang/Representations";
+
 import antlr4 from 'antlr4';
 import ProtoLexer from '../lang/build/ProtoLexer.js';
 import ProtoParser from '../lang/build/ProtoParser.js';
@@ -13,6 +15,20 @@ import ProtoVisitor from '../lang/ProtoVisitor';             // Custom
 import ProtoErrorListener from "../lang/ProtoErrorListener"; // Custom
 const { CommonTokenStream, InputStream } = antlr4;
 
+// Runtime error. From: https://stackoverflow.com/a/27724419
+function RuntimeError(message) {
+  this.message = message;
+  // Use V8's native method if available, otherwise fallback
+  if ("captureStackTrace" in Error)
+      Error.captureStackTrace(this, RuntimeError);
+  else
+      this.stack = (new Error()).stack;
+}
+RuntimeError.prototype = Object.create(Error.prototype);
+RuntimeError.prototype.name = "RuntimeError";
+RuntimeError.prototype.constructor = RuntimeError;
+
+// Main class
 export default class ExecutionSpace extends react.Component {
   constructor(props) {
     super(props);
@@ -37,7 +53,7 @@ export default class ExecutionSpace extends react.Component {
 
       // Run I/O
       programInput: "",
-      programOutput: ""
+      programOutput: []
     };
   }
 
@@ -99,7 +115,12 @@ export default class ExecutionSpace extends react.Component {
 
               <div className="execution-space-output">
                 <p>Program Output:</p>
-                <div id="run-output" className="codebox"></div>
+                <div
+                  id="run-output"
+                  className="codebox"
+                >
+                  {this.state.programOutput.map((line, i) => react.cloneElement(line, {key: i}))}
+                </div>
               </div>
             </div>
           </Tab>
@@ -171,6 +192,75 @@ export default class ExecutionSpace extends react.Component {
   }
 
   run = () => {
-    //
+    const output = [];
+    if (this.state.ast == null) {
+      output.push(
+        <Message type="error">
+          Cannot run program until it is successfully built
+        </Message>
+      );
+
+    } else {
+      try {
+        const result = this.runBlock(this.state.ast, [this.state.programInput]); // The root block (ie. the program)
+
+        output.push(<Message type="success">I'm done.</Message>);
+        if (result == null) {
+          output.push(<Message type="info">No result.</Message>);
+        } else {
+          output.push(<Message type="info">Result: {result.toString()}</Message>);
+        }
+
+      } catch (e) {
+        if (!(e instanceof RuntimeError)) throw e;
+
+        output.push(
+          <Message type="error">
+            Runtime Error: {e.message}
+          </Message>
+        );
+      }
+    }
+
+    this.setState({ programOutput: output });
+  }
+
+  runBlock = (block, args) => {
+    let ret = null; // Void
+    for (const node of block.children) {
+      ret = this.evaluate(node, { args: args, block: block });
+    }
+    return ret;
+  }
+
+  evaluate = (node, context) => {
+    // If a parameter, extract from args
+    if (is.parameter(node)) {
+      if (context.args.length < node.index) {
+        throw new RuntimeError(
+          `Parameter ${node.index} requested, `+
+          `but only ${context.args.length} arguments were given `+
+          `(in block ${context.block.toString()})`
+        );
+      }
+      // This is where the extraction algo would be run
+      return context.args[node.index - 1];
+    }
+
+    // If a sentence, evaluate it
+    if (is.sentence(node)) {
+      let value = this.evaluate(node.ref, context);
+
+      // If its ref is a block, run it
+      if (is.block(value)) {
+        const args = node.params.map((param) => this.evaluate(param, context));
+        value = this.runBlock(value, args);
+      }
+
+      return value;
+    }
+
+    // If not a sentence, then return it verbatim
+    return node;
   }
 }
