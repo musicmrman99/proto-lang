@@ -1,8 +1,5 @@
-.vscode
-.antlr
+/.vscode
+/.antlr
 
-\#Todo
-\#Archive
-
-Proto/tests/build
-Proto/site/src/lang/build
+/tests/build
+/site/src/lang/build
