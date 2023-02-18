@@ -15,20 +15,49 @@ export class Tabs extends react.Component {
   }
 
   render() {
+    let content = [];
+    switch (this.props.tabLocation) {
+      case "top": content = [this.getTabs(), this.getActiveTabContents()]; break;
+      case "left": content = [this.getTabs(), this.getActiveTabContents()]; break;
+      case "bottom": content = [this.getActiveTabContents(), this.getTabs()]; break;
+      case "right": content = [this.getActiveTabContents(), this.getTabs()]; break;
+      default: throw new Error(`No such tab location: '${this.props.tabLocation}'`);
+    }
+
+    const locationClass = {
+      "top": "",
+      "left": " vertical-location",
+      "bottom": "",
+      "right": " vertical-location"
+    }[this.props.tabLocation];
+
     return (
-      <div className="tabs">
-        {this.getTabs()}
-        {this.getActiveTabContents()}
+      <div className={"tabs" + locationClass}>
+        {content}
       </div>
     );
   }
 
   // Get the list of tab components, if any.
   getTabs() {
+    // No children
     if (react.Children.count(this.props.children) === 0) return null;
 
+    const locationClass = {
+      "top": "",
+      "left": " vertical-location",
+      "bottom": "",
+      "right": " vertical-location"
+    }[this.props.tabLocation];
+
+    const orientationClass = {
+      "top": "",
+      "left": " left-orientation",
+      "right": " right-orientation"
+    }[this.props.tabOrientation];
+
     return (
-      <div className="tabs-header">
+      <div className={"tabs-header" + locationClass + orientationClass}>
         {react.Children.map(this.props.children, (child) => {
           const tabProps = {
             "key": child.props.tabid,
@@ -54,9 +83,7 @@ export class Tabs extends react.Component {
   // Get the content of the active tab, if any.
   getActiveTabContents() {
     // No children
-    if (react.Children.count(this.props.children) === 0) {
-      return null;
-    }
+    if (react.Children.count(this.props.children) === 0) return null;
 
     // Nothing active (default to first child)
     if (this.state.active == null) {

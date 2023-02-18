@@ -7,22 +7,38 @@
     gap: var(--layout-space);
 }
 
-.tab.active {
-    background-color: var(--background-very-light);
-}
-
 .tabs-header {
     display: flex;
     flex-direction: row;
     gap: var(--layout-space);
 
-    padding-bottom: calc(var(--layout-space) / 2);
-    border-bottom: 2px solid var(--background-very-dark);
+    flex-shrink: 0; /* Useful for finding layout bugs, but shouldn't be needed */
 }
 .tabs-header > * {
     flex-grow: 1;
 }
 
+.tab.active {
+    background-color: var(--background-very-light);
+}
+
 .tab-content {
-    flex-grow: 1;
+    height: 100%;
+}
+
+/* Location and Rotation Support
+-------------------- */
+
+.tabs.vertical-location {
+    flex-direction: row;
+}
+.tabs-header.vertical-location:not(.left-orientation):not(.right-orientation) {
+    /* This isn't necessary if vertical-rl/lr are already active */
+    flex-direction: column;
+}
+.tabs-header.left-orientation {
+    writing-mode: sideways-lr;
+}
+.tabs-header.right-orientation {
+    writing-mode: sideways-rl;
 }

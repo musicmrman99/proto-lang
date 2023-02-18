@@ -13,12 +13,7 @@ export default class ExecutionSpace extends react.Component {
   render() {
     return (
       <div id="execution-space">
-        <div id="execution-space-header">
-          <h2>Execution Space</h2>
-          <p>... and configure, compile, and run it here.</p>
-        </div>
-
-        <Tabs swapEvent="onMouseEnter">
+        <Tabs tabLocation="top" tabOrientation="top" swapEvent="onMouseEnter">
           <Tab tabid="build-config" name="Build Config">
             <BuildConfigPanel buildConfig={this.props.buildConfig} onBuildConfigChange={this.props.onBuildConfigChange} />
           </Tab>

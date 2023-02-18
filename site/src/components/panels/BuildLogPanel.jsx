@@ -7,7 +7,7 @@ export default class BuildLogPanel extends react.Component {
   render() {
     return (
       <div id="build-log-panel" className="panel">
-        <div id="build-output" className={
+        <div className={
           "codebox " + {
             [null]: "awaiting",
             [true]: "valid",
