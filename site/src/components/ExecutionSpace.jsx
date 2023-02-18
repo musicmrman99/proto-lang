@@ -1,8 +1,6 @@
 import react from "react";
 import './ExecutionSpace.css'
 
-import commands from "../core/Commands";
-
 import { Tabs, Tab } from "./utils/Tabs";
 
 import BuildConfigPanel from "./panels/BuildConfigPanel";
