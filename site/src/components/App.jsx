@@ -3,6 +3,7 @@ import './App.css';
 
 import { configDefault } from '../core/Config';
 
+import Toolbar from './Toolbar';
 import LanguageSpace from './LanguageSpace';
 import ExecutionSpace from './ExecutionSpace';
 
@@ -34,27 +35,37 @@ export default class App extends react.Component {
 
   render() {
     return (
-      <div className="app">
-        <LanguageSpace
-          protoSource={this.state.protoSource}
+      <div id="app">
+        <header>
+          <Toolbar
+            protoSource={this.state.protoSource}
+            buildConfig={this.state.buildConfig}
+            ast={this.state.ast}
+            programInput={this.state.programInput}
 
-          onProtoSourceChange={(protoSource) => this.setState({protoSource: protoSource})}
-        />
+            onBuild={(ast, buildLog) => this.setState({ast: ast, buildLog: buildLog})}
+            onRun={(programOutput) => this.setState({programOutput: programOutput})}
+          />
+        </header>
 
-        <ExecutionSpace
-          protoSource={this.state.protoSource}
-          buildConfig={this.state.buildConfig}
-          ast={this.state.ast}
-          buildLog={this.state.buildLog}
-          programInput={this.state.programInput}
-          programOutput={this.state.programOutput}
+        <main>
+          <LanguageSpace
+            protoSource={this.state.protoSource}
 
-          onBuildConfigChange={(buildConfig) => this.setState({buildConfig: buildConfig})}
-          onBuild={(ast, buildLog) => this.setState({ast: ast, buildLog: buildLog})}
+            onProtoSourceChange={(protoSource) => this.setState({protoSource: protoSource})}
+          />
 
-          onProgramInputChange={(programInput) => this.setState({programInput: programInput})}
-          onRun={(programOutput) => this.setState({programOutput: programOutput})}
-        />
+          <ExecutionSpace
+            buildConfig={this.state.buildConfig}
+            ast={this.state.ast}
+            buildLog={this.state.buildLog}
+            programInput={this.state.programInput}
+            programOutput={this.state.programOutput}
+
+            onBuildConfigChange={(buildConfig) => this.setState({buildConfig: buildConfig})}
+            onProgramInputChange={(programInput) => this.setState({programInput: programInput})}
+          />
+        </main>
       </div>
     );
   }

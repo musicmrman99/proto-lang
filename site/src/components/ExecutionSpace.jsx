@@ -21,26 +21,20 @@ export default class ExecutionSpace extends react.Component {
         </div>
 
         <Tabs swapEvent="onMouseEnter">
-          <Tab tabid="build" name="Build">
-            <div id="execution-space-main">
-              <div className="execution-space-actions">
-                <button id="build-action" onClick={() => this.props.onBuild(...commands.build(this.props.protoSource, this.props.buildConfig))}>Build</button>
-              </div>
-
-              <BuildConfigPanel buildConfig={this.props.buildConfig} onBuildConfigChange={this.props.onBuildConfigChange} />
-              <BuildLogPanel buildLog={this.props.buildLog} />
-            </div>
+          <Tab tabid="build-config" name="Build Config">
+            <BuildConfigPanel buildConfig={this.props.buildConfig} onBuildConfigChange={this.props.onBuildConfigChange} />
           </Tab>
 
-          <Tab tabid="run" name="Run">
-            <div id="execution-space-main">
-              <div className="execution-space-actions">
-                <button id="run-action" onClick={() => this.props.onRun(commands.run(this.props.ast, this.props.programInput))}>Run</button>
-              </div>
+          <Tab tabid="build-log" name="Build Log">
+            <BuildLogPanel buildLog={this.props.buildLog} />
+          </Tab>
 
-              <ProgramInputPanel programInput={this.props.programInput} onProgramInputChange={this.props.onProgramInputChange} />
-              <ProgramOutputPanel programOutput={this.props.programOutput} />
-            </div>
+          <Tab tabid="program-input" name="Program Input">
+            <ProgramInputPanel programInput={this.props.programInput} onProgramInputChange={this.props.onProgramInputChange} />
+          </Tab>
+
+          <Tab tabid="program-output" name="Program Output">
+            <ProgramOutputPanel programOutput={this.props.programOutput} />
           </Tab>
         </Tabs>
       </div>

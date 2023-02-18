@@ -22,27 +22,42 @@
     --layout-space: 20px;
 }
 
-/* Top-Level Rules
+/* Structural Rules
 -------------------------------------------------- */
 
-html, body, .app {
+html, body, #app {
     padding: 0;
     margin: 0;
 }
 
-.app {
+#app {
     width: 100vw;
     height: 100vh;
     padding: var(--layout-space);
     
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: var(--layout-space);
 
     background-color: var(--background);
 }
 
-/* App-Wide Rules
+header, footer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--layout-space);
+
+    background-color: var(--background-light);
+}
+
+main {
+    display: flex;
+    flex-direction: row;
+    gap: var(--layout-space);
+    flex-grow: 1;
+}
+
+/* Generic Rules
 -------------------------------------------------- */
 
 * {
