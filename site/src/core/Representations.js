@@ -1,5 +1,6 @@
+/* Util
+-------------------------------------------------- */
 
-// Util
 const _nodesStr = (nodes, join) => {
     if (nodes == null) return "[]";
     return "["+nodes.map(child => {

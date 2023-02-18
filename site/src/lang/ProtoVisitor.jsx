@@ -1,7 +1,7 @@
 import Message from '../components/utils/Message';
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
-import { repr, is, format } from './Representations';
+import { repr, is, format } from '../core/Representations';
 
 /* Parser
 -------------------------------------------------- */

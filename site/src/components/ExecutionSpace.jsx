@@ -3,10 +3,11 @@ import './ExecutionSpace.css'
 
 import jsonschema from 'json-schema';
 
+import { is } from "../core/Representations";
+import { schema as configSchema } from "../core/Config";
+
 import { Tabs, Tab } from "./utils/Tabs";
 import Message from "./utils/Message";
-
-import { is } from "../lang/Representations";
 
 import antlr4 from 'antlr4';
 import ProtoLexer from '../lang/build/ProtoLexer.js';
@@ -32,12 +33,6 @@ RuntimeError.prototype.constructor = RuntimeError;
 export default class ExecutionSpace extends react.Component {
   constructor(props) {
     super(props);
-    
-    this.configSchema = {
-      type: "object",
-      properties: {},
-      additionalProperties: false
-    }
 
     this.state = {
       // Build Config
@@ -139,7 +134,7 @@ export default class ExecutionSpace extends react.Component {
     }
 
     // Validate JSON;
-    let result = jsonschema.validate(config, this.configSchema);
+    let result = jsonschema.validate(config, configSchema);
     if (!result.valid) config = null;
 
     // Set State
