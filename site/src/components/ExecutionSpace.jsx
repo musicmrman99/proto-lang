@@ -65,7 +65,7 @@ export default class ExecutionSpace extends react.Component {
           <p>... and configure, compile, and run it here.</p>
         </div>
         
-        <Tabs swapOn="hover">
+        <Tabs swapEvent="onMouseEnter">
           <Tab tabid="build" name="Build">
             <div id="execution-space-main">
               <div className="execution-space-input">

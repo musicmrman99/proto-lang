@@ -26,18 +26,23 @@ export class Tabs extends react.Component {
   // Get the list of tab components, if any.
   getTabs() {
     if (react.Children.count(this.props.children) === 0) return null;
+
     return (
       <div className="tabs-header">
-        {react.Children.map(this.props.children, (child) => (
-          <button
-            key={child.props.tabid}
-            className={"tab" + child.props.className != null ? " "+child.props.className : ""}
-            id={child.props.id}
-            onClick={() => this.activateTab(child.props.tabid)}
-          >
-            {child.props.name}
-          </button>
-        ))}
+        {react.Children.map(this.props.children, (child) => {
+          const tabProps = {
+            "key": child.props.tabid,
+            "className": "tab" + child.props.className != null ? " "+child.props.className : "",
+            "id": child.props.id,
+            [this.props.swapEvent]: () => this.activateTab(child.props.tabid)
+          };
+
+          return (
+            <button {...tabProps}>
+              {child.props.name}
+            </button>
+          );
+        })}
       </div>
     );
   }
