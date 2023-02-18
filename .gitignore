@@ -2,4 +2,5 @@
 /.antlr
 
 /tests/build
+/site/node_modules
 /site/src/lang/build
