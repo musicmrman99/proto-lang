@@ -15,6 +15,7 @@ import ProtoParser from '../lang/build/ProtoParser.js';
 import ProtoVisitor from '../lang/ProtoVisitor';             // Custom
 import ProtoErrorListener from "../lang/ProtoErrorListener"; // Custom
 import ProgramInputPanel from "./panels/ProgramInputPanel";
+import ProgramOutputPanel from "./panels/ProgramOutputPanel";
 const { CommonTokenStream, InputStream } = antlr4;
 
 // Runtime error. From: https://stackoverflow.com/a/27724419
@@ -54,21 +55,12 @@ export default class ExecutionSpace extends react.Component {
 
           <Tab tabid="run" name="Run">
             <div id="execution-space-main">
-              <ProgramInputPanel programInput={this.props.programInput} onProgramInputChange={this.props.onProgramInputChange} />
-
               <div className="execution-space-actions">
                 <button id="run-action" onClick={this.run}>Run</button>
               </div>
 
-              <div className="execution-space-output">
-                <p>Program Output:</p>
-                <div
-                  id="run-output"
-                  className="codebox"
-                >
-                  {this.props.programOutput.map((line, i) => react.cloneElement(line, {key: i}))}
-                </div>
-              </div>
+              <ProgramInputPanel programInput={this.props.programInput} onProgramInputChange={this.props.onProgramInputChange} />
+              <ProgramOutputPanel programOutput={this.props.programOutput} />
             </div>
           </Tab>
         </Tabs>
