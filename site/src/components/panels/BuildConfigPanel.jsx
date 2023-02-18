@@ -15,7 +15,7 @@ export default class BuildConfigPanel extends react.Component {
 
   render() {
     return (
-      <div id="build-config-panel" class="panel">
+      <div id="build-config-panel" className="panel">
         <textarea
           className={"codebox " + (this.props.buildConfig != null ? "valid" : "invalid")}
           value={this.state.buildConfigStr}

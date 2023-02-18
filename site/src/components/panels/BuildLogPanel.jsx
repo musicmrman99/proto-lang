@@ -4,7 +4,7 @@ import './BuildLogPanel.css';
 export default class BuildLogPanel extends react.Component {
   render() {
     return (
-      <div id="build-log-panel" class="panel">
+      <div id="build-log-panel" className="panel">
         <div id="build-output" className={
           "codebox " + {
             [null]: "awaiting",
