@@ -7,6 +7,10 @@
     gap: var(--layout-space);
 }
 
+.tab.active {
+    background-color: var(--background-very-light);
+}
+
 .tabs-header {
     display: flex;
     flex-direction: row;

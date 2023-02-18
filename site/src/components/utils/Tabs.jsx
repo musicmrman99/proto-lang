@@ -32,7 +32,11 @@ export class Tabs extends react.Component {
         {react.Children.map(this.props.children, (child) => {
           const tabProps = {
             "key": child.props.tabid,
-            "className": "tab" + (child.props.className != null ? " "+child.props.className : ""),
+            "className": (
+              "tab" +
+              (child.props.tabid === this.state.active ? " active" : "") +
+              (child.props.className != null ? " "+child.props.className : "")
+            ),
             "id": child.props.id,
             [this.props.swapEvent]: () => this.activateTab(child.props.tabid)
           };

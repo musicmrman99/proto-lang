@@ -7,6 +7,8 @@
 -------------------------------------------------- */
 
 :root {
+    --background-bright: rgb(128,128,144);
+    --background-very-light: rgb(64,64,72);
     --background-light: rgb(48,48,54);
     --background: rgb(32,32,36);
     --background-dark: rgb(24,24,27);
