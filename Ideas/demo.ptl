@@ -219,7 +219,7 @@ question {
         Creates a context that takes zero or more proceeding clauses, then for each clause, applies it to the context's current value
         and replaces the current value with what it results in.
 
-        Basically, this is the pipeline constructor. It allows for mutable or immutable data pipelines and monadic code (see example).
+        Basically, this is the pipeline constructor. It allows for mutable or immutable data pipelines and functor-like code (see example).
         It's also what you should use instead of the decorator pattern.
     }#
     with ...
@@ -266,7 +266,7 @@ question {
             transform through using sum of # results in [6]
     }
 
-    example { # with - monadic code
+    example { # with - functor-like code
         with | if non-null map to | : {
             mapper | : @1[block]
             transform @context through associated block in [
@@ -1101,7 +1101,7 @@ example { # actor example
     ]
 
     persistable | : type from ["id" --> number]
-    persistable : { using persisted object }
+    persistable : { using persistable }
 
     # An actor
     actor | : type from [
@@ -1407,7 +1407,7 @@ example { # actor example
 { # Modules and References
     # `module` is just like any other type
     module | : type from {} # checks for 'module' and 'block' types and some other stuff (internal)
-    module : using module
+    module : { using module }
     module of | : { typed using module @1[block] }
     module from | : { transform @1[block] } # block to make a module out of a string given by the given block (ie. a limited form of eval())
 
