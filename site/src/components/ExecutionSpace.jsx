@@ -37,18 +37,6 @@ export default class ExecutionSpace extends react.Component {
     this.state = {
       // Build Config
       buildConfigStr: "{}",
-      buildConfig: {}, // null = invalid config
-
-      // Build Output
-      buildLog: {
-        success: null,
-        output: []
-      },
-      ast: null, // null = not yet built, OR failed to build
-
-      // Run I/O
-      programInput: "",
-      programOutput: []
     };
   }
 
@@ -67,7 +55,7 @@ export default class ExecutionSpace extends react.Component {
                 <p>Build Config:</p>
                 <textarea
                   id="build-input"
-                  className={"codebox " + (this.state.buildConfig != null ? "valid" : "invalid")}
+                  className={"codebox " + (this.props.buildConfig != null ? "valid" : "invalid")}
                   value={this.state.buildConfigStr}
                   onChange={(e) => this.setConfig(e.target.value)}
                 ></textarea>
@@ -84,9 +72,9 @@ export default class ExecutionSpace extends react.Component {
                       [null]: "awaiting",
                       [true]: "valid",
                       [false]: "invalid"
-                    }[this.state.buildLog.success]
+                    }[this.props.buildLog.success]
                   }>
-                  {this.state.buildLog.output.map((message, i) => react.cloneElement(message, {key: i}))}
+                  {this.props.buildLog.output.map((message, i) => react.cloneElement(message, {key: i}))}
                 </div>
               </div>
             </div>
@@ -99,8 +87,8 @@ export default class ExecutionSpace extends react.Component {
                 <textarea
                   id="run-input"
                   className="codebox"
-                  value={this.state.programInput}
-                  onChange={(e) => this.setProgramInput(e.target.value)}
+                  value={this.props.programInput}
+                  onChange={(e) => this.props.onProgramInputChange(e.target.value)}
                 ></textarea>
               </div>
 
@@ -114,7 +102,7 @@ export default class ExecutionSpace extends react.Component {
                   id="run-output"
                   className="codebox"
                 >
-                  {this.state.programOutput.map((line, i) => react.cloneElement(line, {key: i}))}
+                  {this.props.programOutput.map((line, i) => react.cloneElement(line, {key: i}))}
                 </div>
               </div>
             </div>
@@ -138,11 +126,8 @@ export default class ExecutionSpace extends react.Component {
     if (!result.valid) config = null;
 
     // Set State
-    this.setState({buildConfigStr: configStr, buildConfig: config});
-  }
-
-  setProgramInput = (programInput) => {
-    this.setState({programInput: programInput});
+    this.setState({buildConfigStr: configStr});
+    this.props.onBuildConfigChange(config);
   }
 
   build = () => {
@@ -153,7 +138,7 @@ export default class ExecutionSpace extends react.Component {
     };
 
     // Check for configuration errors
-    if (this.state.buildConfig == null) {
+    if (this.props.buildConfig == null) {
       log.success = false;
       log.output.push(<Message type="error">Build Configuration is invalid - please correct it, then try building again.</Message>);
     }
@@ -161,19 +146,19 @@ export default class ExecutionSpace extends react.Component {
     // Run lexer / 1st phase parser
     let tree = null;
     if (log.success) {
-      const chars = new InputStream(this.props.protoInput, true);
+      const chars = new InputStream(this.props.protoSource, true);
       const lexer = new ProtoLexer(chars);
       const tokens  = new CommonTokenStream(lexer);
       const parser = new ProtoParser(tokens);
       parser.removeErrorListeners();
-      parser.addErrorListener(new ProtoErrorListener(this.state.buildConfig, log));
+      parser.addErrorListener(new ProtoErrorListener(this.props.buildConfig, log));
       tree = parser.program();
     }
 
     // Run 2nd phase parser / linker
     let ast = null;
     if (log.success) {
-      const protoLang = new ProtoVisitor(this.state.buildConfig, log);
+      const protoLang = new ProtoVisitor(this.props.buildConfig, log);
       ast = protoLang.visit(tree);
     }
 
@@ -183,12 +168,12 @@ export default class ExecutionSpace extends react.Component {
     } else {
       log.output.push(<Message type="error">Errors Found (see above)</Message>);
     }
-    this.setState({ast: ast, buildLog: log});
+    this.props.onBuild(ast, log);
   }
 
   run = () => {
     const output = [];
-    if (this.state.ast == null) {
+    if (this.props.ast == null) {
       output.push(
         <Message type="error">
           Cannot run program until it is successfully built
@@ -197,7 +182,7 @@ export default class ExecutionSpace extends react.Component {
 
     } else {
       try {
-        const result = this.runBlock(this.state.ast, [this.state.programInput]); // The root block (ie. the program)
+        const result = this.runBlock(this.props.ast, [this.props.programInput]); // The root block (ie. the program)
 
         output.push(<Message type="success">I'm done.</Message>);
         if (result == null) {
@@ -217,7 +202,7 @@ export default class ExecutionSpace extends react.Component {
       }
     }
 
-    this.setState({ programOutput: output });
+    this.props.onRun(output);
   }
 
   runBlock = (block, args) => {
