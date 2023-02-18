@@ -1,4 +1,4 @@
-import Message from '../components/utils/Message';
+import Message from '../utils/Message';
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
 import { repr, is, format } from '../core/Representations';
@@ -263,12 +263,12 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                     nestableNode.decls.push(decl);
                     declTemplate = true;
 
-                    this.log.output.push(<Message type="info">New Declaration: {decl.toString()}</Message>);
+                    this.log.output.push(new Message("info", "New Declaration: " + decl.toString()));
 
                 } else {
                     finalChildren.push(sentence);
 
-                    this.log.output.push(<Message type="info">New Sentence: {sentence.toString()}</Message>);
+                    this.log.output.push(new Message("info", "New Sentence: " + sentence.toString()));
                 }
 
                 // Parse nested nodes (recurse into non-nestable child nodes as needed).
@@ -288,9 +288,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             } else if (isHardTerminator) {
                 this.log.success = false;
                 this.log.output.push(
-                    <Message type="error">
-                        Incomplete Sentence: {format.nodeListToString(candidateNodes)}
-                    </Message>
+                    new Message("error", "Incomplete Sentence: " + format.nodeListToString(candidateNodes))
                 );
             }
         }
@@ -309,24 +307,24 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                     // Error messages - be precise
                     if (!is.hasDeclarations(nestableNode)) {
                         this.log.output.push(
-                            <Message type="error">
-                                Declaration operator found outside of a block (at the end of {format.nodeListToString(candidateNodes)})
-                            </Message>
+                            new Message("error",
+                                "Declaration operator found outside of a block (at the end of " + format.nodeListToString(candidateNodes) + ")"
+                            )
                         );
                     } else if (isImpossible(declTemplate)) {
                         this.log.output.push(
-                            <Message type="error">
-                                Multi-line sentence templates are not supported ({format.nodeListToString(candidateNodes)})
-                            </Message>
+                            new Message("error",
+                                "Multi-line sentence templates are not supported (" + format.nodeListToString(candidateNodes) + ")"
+                            )
                         );
                     } else {
                         this.log.output.push(
-                            <Message type="error">
-                                Declaration operator found inside of another declaration's value (at end of {format.nodeListToString(candidateNodes)})
-                            </Message>
+                            new Message("error",
+                                "Declaration operator found inside of another declaration's value (at end of " + format.nodeListToString(candidateNodes) + ")"
+                            )
                         );
                         this.log.output.push(
-                            <Message type="info">Declaration chaining is not supported.</Message>
+                            new Message("info", "Declaration chaining is not supported.")
                         );
                     }
 
@@ -337,9 +335,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 if (!candidateNodes.some(is.sentenceFragment)) {
                     this.log.success = false;
                     this.log.output.push(
-                        <Message type="error">
-                            Sentence templates consists only of placeholders ({format.nodeListToString(candidateNodes)})
-                        </Message>
+                        new Message("error",
+                            "Sentence templates consists only of placeholders (" + format.nodeListToString(candidateNodes) + ")"
+                        )
                     );
                     return []; // Block/map content is malformed - no children
                 }
@@ -350,9 +348,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 )) {
                     this.log.success = false;
                     this.log.output.push(
-                        <Message type="error">
-                            Sentence templates must not consist only of placeholders ({format.nodeListToString(candidateNodes)})
-                        </Message>
+                        new Message("error",
+                            "Sentence templates must not consist only of placeholders (" + format.nodeListToString(candidateNodes) + ")"
+                        )
                     );
                     return []; // Block/map content is malformed - no children
                 }
@@ -438,7 +436,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         const indentStr = indent > 1 ? "-".repeat(indent-1)+"> " : "";
         const log = (message) => {
-            this.log.output.push(<Message type="info">{indentStr}{message}</Message>);
+            this.log.output.push(new Message("info", indentStr + message));
         };
 
         log("Parse Sentence: " + format.nodeListToString(sentence));

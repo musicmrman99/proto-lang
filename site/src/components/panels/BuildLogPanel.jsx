@@ -1,6 +1,8 @@
 import react from 'react';
 import './BuildLogPanel.css';
 
+import Message from '../utils/Message';
+
 export default class BuildLogPanel extends react.Component {
   render() {
     return (
@@ -12,7 +14,11 @@ export default class BuildLogPanel extends react.Component {
             [false]: "invalid"
           }[this.props.buildLog.success]
         }>
-          {this.props.buildLog.output.map((message, i) => react.cloneElement(message, {key: i}))}
+          {this.props.buildLog.output.map((message, i) => (
+            <Message type={message.type} key={i}>
+              {message.content}
+            </Message>
+          ))}
         </div>
       </div>
     );

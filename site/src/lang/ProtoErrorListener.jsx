@@ -1,5 +1,5 @@
 import antlr4 from 'antlr4';
-import Message from '../components/utils/Message';
+import Message from '../utils/Message';
 
 export default class ProtoErrorListener extends antlr4.error.ErrorListener {
     /**
@@ -18,6 +18,6 @@ export default class ProtoErrorListener extends antlr4.error.ErrorListener {
 
     syntaxError(recognizer, offendingSymbol, line, column, msg, err) {
         this.log.success = false;
-        this.log.output.push(<Message type="error">{`${offendingSymbol} line ${line}, col ${column}: ${msg}`}</Message>);
+        this.log.output.push(new Message("error", `${offendingSymbol} line ${line}, col ${column}: ${msg}`));
     }
 }
