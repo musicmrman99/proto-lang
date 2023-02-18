@@ -14,7 +14,6 @@ This is how to build the parser for the execution environment:
 
 In Bash:
 ```bash
-cd Proto
 antlr4 -Dlanguage=JavaScript -visitor -no-listener ProtoLexer.g4 -o site/src/lang/build
 antlr4 -Dlanguage=JavaScript -visitor -no-listener ProtoParser.g4 -o site/src/lang/build
 ```
@@ -26,7 +25,6 @@ This is how to build the parser for the test suite:
 
 In Bash:
 ```bash
-cd Proto
 antlr4 -Dlanguage=Java ProtoLexer.g4 -o tests/build/generated
 antlr4 -Dlanguage=Java ProtoParser.g4 -o tests/build/generated
 javac tests/build/generated/Proto*.java -d tests/build
@@ -39,7 +37,7 @@ The test suite is manual - each of these commands should be run in turn and its 
 
 In CMD:
 ```batch
-cd Proto/tests/build
+cd tests/build
 
 grun Proto program -gui ../feature/positive/comment.ptl
 grun Proto program -gui ../tests/feature/positive/primitive.ptl
