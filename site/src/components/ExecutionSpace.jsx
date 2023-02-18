@@ -1,10 +1,7 @@
 import react from "react";
 import './ExecutionSpace.css'
 
-import jsonschema from 'json-schema';
-
 import { is } from "../core/Representations";
-import { schema as configSchema } from "../core/Config";
 
 import { Tabs, Tab } from "./utils/Tabs";
 import Message from "./utils/Message";
@@ -14,6 +11,7 @@ import ProtoLexer from '../lang/build/ProtoLexer.js';
 import ProtoParser from '../lang/build/ProtoParser.js';
 import ProtoVisitor from '../lang/ProtoVisitor';             // Custom
 import ProtoErrorListener from "../lang/ProtoErrorListener"; // Custom
+import BuildConfigPanel from "./panels/BuildConfigPanel";
 const { CommonTokenStream, InputStream } = antlr4;
 
 // Runtime error. From: https://stackoverflow.com/a/27724419
@@ -31,15 +29,6 @@ RuntimeError.prototype.constructor = RuntimeError;
 
 // Main class
 export default class ExecutionSpace extends react.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      // Build Config
-      buildConfigStr: "{}",
-    };
-  }
-
   render() {
     return (
       <div id="execution-space">
@@ -47,19 +36,11 @@ export default class ExecutionSpace extends react.Component {
           <h2>Execution Space</h2>
           <p>... and configure, compile, and run it here.</p>
         </div>
-        
+
         <Tabs swapEvent="onMouseEnter">
           <Tab tabid="build" name="Build">
             <div id="execution-space-main">
-              <div className="execution-space-input">
-                <p>Build Config:</p>
-                <textarea
-                  id="build-input"
-                  className={"codebox " + (this.props.buildConfig != null ? "valid" : "invalid")}
-                  value={this.state.buildConfigStr}
-                  onChange={(e) => this.setConfig(e.target.value)}
-                ></textarea>
-              </div>
+              <BuildConfigPanel buildConfig={this.props.buildConfig} onBuildConfigChange={this.props.onBuildConfigChange} />
 
               <div className="execution-space-actions">
                 <button id="build-action" onClick={this.build}>Build</button>
@@ -110,24 +91,6 @@ export default class ExecutionSpace extends react.Component {
         </Tabs>
       </div>
     );
-  }
-
-  setConfig = (configStr) => {
-    // Parse JSON
-    let config = null;
-    try {
-      config = JSON.parse(configStr);
-    } catch (e) {
-      if (!(e instanceof SyntaxError)) throw e; // If it's not a syntax error, re-throw
-    }
-
-    // Validate JSON;
-    let result = jsonschema.validate(config, configSchema);
-    if (!result.valid) config = null;
-
-    // Set State
-    this.setState({buildConfigStr: configStr});
-    this.props.onBuildConfigChange(config);
   }
 
   build = () => {
