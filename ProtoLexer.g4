@@ -74,7 +74,7 @@ LOGICAL_LITERAL : 'true' | 'false' ;
 // Maps
 OPEN_MAP : '[' ;
 CLOSE_MAP : ']' ;
-ASSOCIATION : [<-][-/][->] ;
+ASSOCIATION : [<-][->] ;
 ELEM_DELIM : ',' ;
 
 // Blocks
