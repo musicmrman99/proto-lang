@@ -2,14 +2,14 @@ import react from 'react';
 import './BuildConfigPanel.css';
 
 import jsonschema from 'json-schema';
-import { schema as configSchema } from "../../core/Config";
+import { configSchema } from "../../core/Config";
 
 export default class BuildConfigPanel extends react.Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      buildConfigStr: "{}",
+      buildConfigStr: JSON.stringify(this.props.buildConfig),
     };
   }
 

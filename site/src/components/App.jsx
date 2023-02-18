@@ -1,6 +1,8 @@
 import react from 'react';
 import './App.css';
 
+import { configDefault } from '../core/Config';
+
 import LanguageSpace from './LanguageSpace';
 import ExecutionSpace from './ExecutionSpace';
 
@@ -13,7 +15,7 @@ export default class App extends react.Component {
       protoSource: "",
 
       // Build Config
-      buildConfig: {}, // null = invalid config
+      buildConfig: configDefault, // null = invalid config
 
       // Build Output
       buildLog: {
