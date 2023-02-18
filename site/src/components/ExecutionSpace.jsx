@@ -6,12 +6,14 @@ import { is } from "../core/Representations";
 import { Tabs, Tab } from "./utils/Tabs";
 import Message from "./utils/Message";
 
+import BuildConfigPanel from "./panels/BuildConfigPanel";
+import BuildLogPanel from "./panels/BuildLogPanel";
+
 import antlr4 from 'antlr4';
 import ProtoLexer from '../lang/build/ProtoLexer.js';
 import ProtoParser from '../lang/build/ProtoParser.js';
 import ProtoVisitor from '../lang/ProtoVisitor';             // Custom
 import ProtoErrorListener from "../lang/ProtoErrorListener"; // Custom
-import BuildConfigPanel from "./panels/BuildConfigPanel";
 const { CommonTokenStream, InputStream } = antlr4;
 
 // Runtime error. From: https://stackoverflow.com/a/27724419
@@ -40,24 +42,12 @@ export default class ExecutionSpace extends react.Component {
         <Tabs swapEvent="onMouseEnter">
           <Tab tabid="build" name="Build">
             <div id="execution-space-main">
-              <BuildConfigPanel buildConfig={this.props.buildConfig} onBuildConfigChange={this.props.onBuildConfigChange} />
-
               <div className="execution-space-actions">
                 <button id="build-action" onClick={this.build}>Build</button>
               </div>
 
-              <div className="execution-space-output">
-                <p>Build Log:</p>
-                <div id="build-output" className={
-                    "codebox " + {
-                      [null]: "awaiting",
-                      [true]: "valid",
-                      [false]: "invalid"
-                    }[this.props.buildLog.success]
-                  }>
-                  {this.props.buildLog.output.map((message, i) => react.cloneElement(message, {key: i}))}
-                </div>
-              </div>
+              <BuildConfigPanel buildConfig={this.props.buildConfig} onBuildConfigChange={this.props.onBuildConfigChange} />
+              <BuildLogPanel buildLog={this.props.buildLog} />
             </div>
           </Tab>
 
