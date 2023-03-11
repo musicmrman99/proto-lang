@@ -77,7 +77,7 @@ export class Tabs extends react.Component {
       "className": (
         // Our classes
         "tab" +
-        (child.props.tabid === this.state.active ? " active" : "") +
+        this.getClassForActiveState(child) +
         this.getClassForIconLocation(iconLocation) +
 
         // Given classes
@@ -156,6 +156,12 @@ export class Tabs extends react.Component {
       "right": ""
     }[iconLocation];
   }
+
+  getClassForActiveState = (child) => (
+    child.props.tabid === this.state.active ?
+      " active" :
+      ""
+  );
 }
 
 /**
