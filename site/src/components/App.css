@@ -34,7 +34,6 @@ html, body, #app {
 #app {
     width: 100vw;
     height: 100vh;
-    padding: var(--layout-space);
     
     display: flex;
     flex-direction: column;
