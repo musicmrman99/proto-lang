@@ -11,7 +11,7 @@ export class Tabs extends react.Component {
     super(props);
     this.state = {
       active: null,
-      hovered: false // For the purposes of showLabel="hover"
+      hovered: false // For the purposes of showLabel="hover" and showContent="hover"
     };
   }
 
@@ -35,7 +35,11 @@ export class Tabs extends react.Component {
     }
 
     return (
-      <div className={"tabs" + this.getClassForLocation(location)}>
+      <div
+        className={"tabs" + this.getClassForLocation(location)}
+        onMouseEnter={this.hoveredIn}
+        onMouseLeave={this.hoveredOut}
+      >
         {content}
       </div>
     );
@@ -47,11 +51,7 @@ export class Tabs extends react.Component {
     if (react.Children.count(this.props.children) === 0) return null;
 
     return (
-      <div
-        className={"tabs-header" + this.getClassForLocation(location)}
-        onMouseEnter={this.hoveredIn}
-        onMouseLeave={this.hoveredOut}
-      >
+      <div className={"tabs-header" + this.getClassForLocation(location)}>
         {react.Children.map(this.props.children, this.getTab)}
       </div>
     );
@@ -100,20 +100,26 @@ export class Tabs extends react.Component {
 
   // Get the content of the active tab, if any.
   getActiveTabContents = () => {
-    // No children
-    if (react.Children.count(this.props.children) === 0) return null;
+    if (
+      this.props.showContent === "always" ||
+      (this.props.showContent === "hover" && this.state.hovered)
+    ) {
+      // No children
+      if (react.Children.count(this.props.children) === 0) return null;
 
-    // Nothing active (default to first child)
-    if (this.state.active == null) {
-      return react.Children.toArray(this.props.children)[0];
+      // Nothing active (default to first child)
+      if (this.state.active == null) {
+        return react.Children.toArray(this.props.children)[0];
+      }
+
+      // Selected child
+      const first = react.Children.toArray(this.props.children).find((tab) => tab.props.tabid === this.state.active);
+      if (first !== undefined) return first;
+
+      // Selected child does not exist (tabs have changed since last selection; reset active tab)
+      this.setState({active: null});
     }
-
-    // Selected child
-    const first = react.Children.toArray(this.props.children).find((tab) => tab.props.tabid === this.state.active);
-    if (first !== undefined) return first;
-
-    // Selected child does not exist (tabs have changed since last selection; reset active tab)
-    this.setState({active: null});
+    return null;
   }
 
   /* Actions
