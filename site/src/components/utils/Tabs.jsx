@@ -178,10 +178,10 @@ export class Tabs extends react.Component {
 
   getClassForIconLocation = (iconLocation) => {
     return {
-      "top": " icon-location-vertical icon-location-end",
-      "left": " icon-location-end",
-      "bottom": " icon-location-vertical",
-      "right": ""
+      "top": " icon-location-vertical",
+      "left": "",
+      "bottom": " icon-location-vertical icon-location-end",
+      "right": " icon-location-end"
     }[iconLocation];
   }
 
