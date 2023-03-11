@@ -180,8 +180,8 @@ export class Tabs extends react.Component {
     return {
       "top": " icon-location-vertical",
       "left": "",
-      "bottom": " icon-location-vertical icon-location-end",
-      "right": " icon-location-end"
+      "bottom": " icon-location-vertical",
+      "right": ""
     }[iconLocation];
   }
 
@@ -211,8 +211,13 @@ export class Tabs extends react.Component {
     const icon = this.getIconFor(child);
     const showLabel = this.getShowLabel();
 
-    if (icon != null && showLabel !== "only") {
-      return (<span key="icon" className="icon material-symbols-outlined">{icon}</span>);
+    if (showLabel !== "only") {
+      return (
+        // Show even if icon is null to allow for space-between alignment, but drop the padding
+        <span key="icon" className={icon != null ? "icon material-symbols-outlined" : ""}>
+          {icon}
+        </span>
+      );
     }
     return null;
   };

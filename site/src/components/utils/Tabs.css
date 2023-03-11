@@ -37,13 +37,11 @@
 
 .tab {
     display: flex;
+    justify-content: space-between;
     align-items: center;
 }
 .tab.icon-location-vertical {
     flex-direction: column;
-}
-.tab.icon-location-end {
-    justify-content: end;
 }
 
 .tab.active {
