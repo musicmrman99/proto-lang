@@ -10,7 +10,8 @@ export class Tabs extends react.Component {
   constructor(props) {
     super(props);
     this.state = {
-      active: null
+      active: null,
+      hovered: false // For the purposes of showLabel="hover"
     };
   }
 
@@ -46,7 +47,11 @@ export class Tabs extends react.Component {
     if (react.Children.count(this.props.children) === 0) return null;
 
     return (
-      <div className={"tabs-header" + this.getClassForLocation(location)}>
+      <div
+        className={"tabs-header" + this.getClassForLocation(location)}
+        onMouseEnter={this.hoveredIn}
+        onMouseLeave={this.hoveredOut}
+      >
         {react.Children.map(this.props.children, this.getTab)}
       </div>
     );
@@ -55,7 +60,7 @@ export class Tabs extends react.Component {
   getTab = (child) => {
     const iconLocation = this.getIconLocation();
 
-    const labelElem = (<span key="label">{child.props.label}</span>);
+    const labelElem = this.getLabelComponentFor(child);
     const iconElem = this.getIconComponentFor(child);
 
     let content = [];
@@ -115,29 +120,52 @@ export class Tabs extends react.Component {
   -------------------- */
 
   // Active the tab with the given tab ID
-  activateTab(tabid) {
+  activateTab = (tabid) => {
     this.setState({active: tabid});
+  }
+
+  hoveredIn = () => {
+    this.setState({hovered: true});
+  }
+  hoveredOut = () => {
+    this.setState({hovered: false});
   }
 
   /* Utils
   -------------------- */
 
-  getIconComponentFor = (child) => (
-    child.props.icon != null ?
-      <span key="icon" className="icon material-symbols-outlined">{child.props.icon}</span> :
-      null
-  );
+  /* Props
+  ---------- */
+
+  getShowLabel = () => (
+    this.props.showLabel != null ?
+      this.props.showLabel :
+      "always"
+  )
 
   getLocation = () => (
     this.props.location != null ?
       this.props.location :
       "top"
   );
+
   getIconLocation = () => (
     this.props.iconLocation != null ?
       this.props.iconLocation :
       this.getLocation() // Default to same as location
   );
+
+  /* Coupled Props
+  ---------- */
+
+  getIconFor = (child) => (
+    child.props.icon != null ?
+      child.props.icon :
+      null // Undefined -> Null
+  )
+
+  /* Class Determiners
+  ---------- */
 
   getClassForLocation = (location) => {
     return {
@@ -162,6 +190,32 @@ export class Tabs extends react.Component {
       " active" :
       ""
   );
+
+  /* Component Factories
+  ---------- */
+
+  getLabelComponentFor = (child) => {
+    const showLabel = this.getShowLabel();
+
+    if (
+      showLabel === "always" ||
+      showLabel === "only" ||
+      (showLabel === "hover" && this.state.hovered)
+    ) {
+      return (<span key="label">{child.props.label}</span>)
+    }
+    return null;
+  }
+
+  getIconComponentFor = (child) => {
+    const icon = this.getIconFor(child);
+    const showLabel = this.getShowLabel();
+
+    if (icon != null && showLabel !== "only") {
+      return (<span key="icon" className="icon material-symbols-outlined">{icon}</span>);
+    }
+    return null;
+  };
 }
 
 /**
