@@ -3,10 +3,12 @@ import './BuildLogPanel.css';
 
 import Message from '../utils/Message';
 
+import Panel from './Panel';
+
 export default class BuildLogPanel extends react.Component {
   render() {
     return (
-      <div id="build-log-panel" className="panel">
+      <Panel id="build-log-panel">
         <div className={
           "codebox " + {
             [null]: "awaiting",
@@ -20,7 +22,7 @@ export default class BuildLogPanel extends react.Component {
             </Message>
           ))}
         </div>
-      </div>
+      </Panel>
     );
   }
 }

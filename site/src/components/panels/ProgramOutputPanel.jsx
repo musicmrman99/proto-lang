@@ -1,12 +1,14 @@
 import react from 'react';
 import './ProgramOutputPanel.css';
 
+import Panel from './Panel';
+
 import Message from '../utils/Message';
 
 export default class ProgramOutputPanel extends react.Component {
   render() {
     return (
-      <div id="program-output-panel" className="panel">
+      <Panel id="program-output-panel">
         <div className="codebox">
           {this.props.programOutput.map((message, i) => (
             <Message type={message.type} key={i}>
@@ -14,7 +16,7 @@ export default class ProgramOutputPanel extends react.Component {
             </Message>
           ))}
         </div>
-      </div>
+      </Panel>
     );
   }
 }

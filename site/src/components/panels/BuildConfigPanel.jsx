@@ -4,6 +4,8 @@ import './BuildConfigPanel.css';
 import jsonschema from 'json-schema';
 import { configSchema } from "../../core/Config";
 
+import Panel from './Panel';
+
 export default class BuildConfigPanel extends react.Component {
   constructor(props) {
     super(props);
@@ -15,16 +17,16 @@ export default class BuildConfigPanel extends react.Component {
 
   render() {
     return (
-      <div id="build-config-panel" className="panel">
+      <Panel id="build-config-panel">
         <textarea
           className={"codebox " + (this.props.buildConfig != null ? "valid" : "invalid")}
           value={this.state.buildConfigStr}
           onChange={(e) => this.setConfig(e.target.value)}
         ></textarea>
-      </div>
+      </Panel>
     );
   }
-  
+
   setConfig = (configStr) => {
     // Parse JSON
     let config = null;
