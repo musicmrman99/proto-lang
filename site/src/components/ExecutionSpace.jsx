@@ -13,7 +13,7 @@ export default class ExecutionSpace extends react.Component {
   render() {
     return (
       <div id="execution-space">
-        <Tabs location="right" iconLocation="right" showLabel="hover" showContent="hover" swapEvent="onMouseEnter">
+        <Tabs location="right" iconLocation="right" showLabel="hover-tabs" showContent="hover" swapEvent="onMouseOver">
           <Tab tabid="build-config" label="Build Config" icon="build">
             <BuildConfigPanel buildConfig={this.props.buildConfig} onBuildConfigChange={this.props.onBuildConfigChange} />
           </Tab>

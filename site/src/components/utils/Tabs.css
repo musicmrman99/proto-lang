@@ -55,6 +55,13 @@
 /* Content
 -------------------- */
 
+/* A container for a Tab managed by Tabs */
+.tabs-content {
+    width: 100%;
+    height: 100%;
+}
+
+/* The content of a Tab */
 .tab-content {
     height: 100%;
 }

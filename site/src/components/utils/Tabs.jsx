@@ -11,7 +11,12 @@ export class Tabs extends react.Component {
     super(props);
     this.state = {
       active: null,
-      hovered: false // For the purposes of showLabel="hover" and showContent="hover"
+
+      // Cannot have tabsHovered and contentHovered, as the ordering of calls to *HoveredOut()/*HoveredIn() and
+      // the conditional rendering of the content means that contentHoveredIn() would never be called after leaving
+      // the tabs-header and attempting to enter the content, as the content won't be displayed by that point.
+      hovered: false, // For the purposes of showLabel="hover" and showContent="hover"
+      tabsHovered: false // For the purposes of showLabel="hover", showLabel="hover-tabs", and showContent="hover"
     };
   }
 
@@ -51,7 +56,11 @@ export class Tabs extends react.Component {
     if (react.Children.count(this.props.children) === 0) return null;
 
     return (
-      <div className={"tabs-header" + this.getClassForLocation(location)}>
+      <div
+        className={"tabs-header" + this.getClassForLocation(location)}
+        onMouseEnter={this.tabsHoveredIn}
+        onMouseLeave={this.tabsHoveredOut}
+      >
         {react.Children.map(this.props.children, this.getTab)}
       </div>
     );
@@ -137,6 +146,13 @@ export class Tabs extends react.Component {
     this.setState({hovered: false});
   }
 
+  tabsHoveredIn = () => {
+    this.setState({tabsHovered: true});
+  }
+  tabsHoveredOut = () => {
+    this.setState({tabsHovered: false});
+  }
+
   /* Utils
   -------------------- */
 
@@ -206,7 +222,8 @@ export class Tabs extends react.Component {
     if (
       showLabel === "always" ||
       showLabel === "only" ||
-      (showLabel === "hover" && this.state.hovered)
+      (showLabel === "hover" && this.state.hovered) ||
+      (showLabel === "hover-tabs" && this.state.tabsHovered)
     ) {
       return (<span key="label">{child.props.label}</span>)
     }
