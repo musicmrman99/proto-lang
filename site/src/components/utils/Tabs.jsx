@@ -197,11 +197,15 @@ export class Tab extends react.Component {
 export class TabContent extends react.Component {
   render() {
     return (
-      <div className="tab-content">
-        <TabsContext.Consumer>
-          {(tabs) => tabs.active.includes(this.props.tabid) ? this.props.children : null}
-        </TabsContext.Consumer>
-      </div>
+      <TabsContext.Consumer>
+        {(tabs) => tabs.active.includes(this.props.tabid) ?
+          (
+            <div className="tab-content">
+              {this.props.children}
+            </div>
+          ) :
+          null}
+      </TabsContext.Consumer>
     );
   }
 }
