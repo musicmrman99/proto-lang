@@ -21,27 +21,12 @@ export default class Button extends react.Component {
       default:
     }
 
-    return (
-      <button {...this.getBaseButtonProps()}>
-        {content}
-      </button>
-    );
-  }
-
-  /* Utils
-  -------------------- */
-
-  /* Props
-  ---------- */
-
-  getBaseButtonProps = () => {
-    const {children, label, icon, showLabel, iconLocation, ...otherProps} = this.props;
-    return Object.assign(
+    const props = Object.assign(
       // Default
       {},
 
       // Inherit
-      otherProps,
+      this.getInheritableProps(),
 
       // Override
       {
@@ -55,6 +40,23 @@ export default class Button extends react.Component {
         )
       }
     );
+
+    return (
+      <button {...props}>
+        {content}
+      </button>
+    );
+  }
+
+  /* Utils
+  -------------------- */
+
+  /* Props
+  ---------- */
+
+  getInheritableProps = () => {
+    const {children, label, icon, showLabel, iconLocation, ...otherProps} = this.props;
+    return otherProps;
   }
 
   getShowLabel = () => (
