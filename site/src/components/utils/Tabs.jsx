@@ -1,6 +1,8 @@
 import react from "react";
 import './Tabs.css';
 
+export const TabsContext = react.createContext();
+
 /**
  * Show a tabbed pane.
  * 
@@ -10,67 +12,29 @@ export class Tabs extends react.Component {
   constructor(props) {
     super(props);
     this.state = {
-      active: null,
-
-      // Cannot have tabsHovered and contentHovered, as the ordering of calls to *HoveredOut()/*HoveredIn() and
-      // the conditional rendering of the content means that contentHoveredIn() would never be called after leaving
-      // the tabs-header and attempting to enter the content, as the content won't be displayed by that point.
-      hovered: false, // For the purposes of showLabel="hover" and showContent="hover"
-      tabsHovered: false // For the purposes of showLabel="hover", showLabel="hover-tabs", and showContent="hover"
+      hovered: false // For showLabel="hover"
     };
   }
 
   render() {
-    const location = this.getLocation();
-
-    const tabsElem = (<react.Fragment key="tabs-header">{this.getTabs(location)}</react.Fragment>);
-    const activeTabContentsElem = (<react.Fragment key="tab-content">{this.getActiveTabContents()}</react.Fragment>);
-
-    let content = [];
-    switch (location) {
-      case "top":
-      case "left":
-        content = [tabsElem, activeTabContentsElem]; break;
-
-      case "bottom":
-      case "right":
-        content = [activeTabContentsElem, tabsElem]; break;
-
-      default:
-    }
-
-    return (
-      <div
-        className={"tabs" + this.getClassForLocation(location)}
-        onMouseEnter={this.hoveredIn}
-        onMouseLeave={this.hoveredOut}
-      >
-        {content}
-      </div>
-    );
-  }
-
-  // Get the list of tab components, if any.
-  getTabs = (location) => {
-    // No children
     if (react.Children.count(this.props.children) === 0) return null;
 
     return (
       <div
-        className={"tabs-header" + this.getClassForLocation(location)}
-        onMouseEnter={this.tabsHoveredIn}
-        onMouseLeave={this.tabsHoveredOut}
+        className="tabs"
+        onMouseEnter={this.hoveredIn}
+        onMouseLeave={this.hoveredOut}
       >
         {react.Children.map(this.props.children, this.getTab)}
       </div>
     );
   }
 
-  getTab = (child) => {
+  getTab = (tab) => {
     const iconLocation = this.getIconLocation();
 
-    const labelElem = this.getLabelComponentFor(child);
-    const iconElem = this.getIconComponentFor(child);
+    const labelElem = this.getLabelComponentFor(tab);
+    const iconElem = this.getIconComponentFor(tab);
 
     let content = [];
     switch (iconLocation) {
@@ -85,58 +49,59 @@ export class Tabs extends react.Component {
       default:
     }
 
-    const tabProps = {
-      "key": child.props.tabid,
-      "id": child.props.id,
-      "className": (
-        // Our classes
-        "tab" +
-        this.getClassForActiveState(child) +
-        this.getClassForIconLocation(iconLocation) +
-
-        // Given classes
-        (child.props.className != null ? " "+child.props.className : "")
-      ),
-      [this.props.swapEvent]: () => this.activateTab(child.props.tabid)
-    };
-
     return (
-      <button {...tabProps}>
-        {content}
-      </button>
+      <TabsContext.Consumer>
+        {(tabs) => {
+          // Ensure mutual exclusion of activate and deactivate functions if
+          // the events they run on are the same.
+          let activateFn = () => tabs.activate(tab.props.tabid);
+          let deactivateFn = () => tabs.deactivate(tab.props.tabid);
+          if (this.props.activateEvent === this.props.deactivateEvent) {
+            activateFn = () => this.toggleActive(tabs, tab.props.tabid);
+            deactivateFn = () => this.toggleActive(tabs, tab.props.tabid);
+          }
+
+          return (
+            <button {...{
+              "key": tab.props.tabid,
+              "id": tab.props.id,
+              "className": (
+                // Our classes
+                "tab" +
+                this.getClassForActiveState(tabs, tab) +
+                this.getClassForIconLocation(iconLocation) +
+
+                // Given classes
+                (tab.props.className != null ? " "+tab.props.className : "")
+              ),
+
+              [this.props.activateEvent]: activateFn,
+              [this.props.deactivateEvent]: deactivateFn
+            }}>
+              {content}
+            </button>
+          );
+        }}
+      </TabsContext.Consumer>
     );
-  }
-
-  // Get the content of the active tab, if any.
-  getActiveTabContents = () => {
-    if (
-      this.props.showContent === "always" ||
-      (this.props.showContent === "hover" && this.state.hovered)
-    ) {
-      // No children
-      if (react.Children.count(this.props.children) === 0) return null;
-
-      // Nothing active (default to first child)
-      if (this.state.active == null) {
-        return react.Children.toArray(this.props.children)[0];
-      }
-
-      // Selected child
-      const first = react.Children.toArray(this.props.children).find((tab) => tab.props.tabid === this.state.active);
-      if (first !== undefined) return first;
-
-      // Selected child does not exist (tabs have changed since last selection; reset active tab)
-      this.setState({active: null});
-    }
-    return null;
   }
 
   /* Actions
   -------------------- */
 
-  // Active the tab with the given tab ID
-  activateTab = (tabid) => {
-    this.setState({active: tabid});
+  /**
+   * Toggle the active status of the given tab.
+   * 
+   * Used instead of activateEvent and deactivateEvent if they are the same event.
+   * 
+   * @param {string} tabid The ID of the tab to toggle the active status of.
+   */
+  toggleActive = (tabs, tabid) => {
+    if (tabs.active.includes(tabid)) {
+      tabs.deactivate(tabid);
+    } else {
+      tabs.activate(tabid);
+    }
   }
 
   hoveredIn = () => {
@@ -144,13 +109,6 @@ export class Tabs extends react.Component {
   }
   hoveredOut = () => {
     this.setState({hovered: false});
-  }
-
-  tabsHoveredIn = () => {
-    this.setState({tabsHovered: true});
-  }
-  tabsHoveredOut = () => {
-    this.setState({tabsHovered: false});
   }
 
   /* Utils
@@ -165,73 +123,39 @@ export class Tabs extends react.Component {
       "always"
   )
 
-  getLocation = () => (
-    this.props.location != null ?
-      this.props.location :
-      "top"
-  );
-
   getIconLocation = () => (
     this.props.iconLocation != null ?
       this.props.iconLocation :
-      this.getLocation() // Default to same as location
+      "left"
   );
 
   /* Coupled Props
   ---------- */
 
-  getIconFor = (child) => (
-    child.props.icon != null ?
-      child.props.icon :
+  getIconFor = (tab) => (
+    tab.props.icon != null ?
+      tab.props.icon :
       null // Undefined -> Null
   )
-
-  /* Class Determiners
-  ---------- */
-
-  getClassForLocation = (location) => {
-    return {
-      "top": "",
-      "left": " location-vertical",
-      "bottom": "",
-      "right": " location-vertical"
-    }[location];
-  }
-
-  getClassForIconLocation = (iconLocation) => {
-    return {
-      "top": " icon-location-vertical",
-      "left": "",
-      "bottom": " icon-location-vertical",
-      "right": ""
-    }[iconLocation];
-  }
-
-  getClassForActiveState = (child) => (
-    child.props.tabid === this.state.active ?
-      " active" :
-      ""
-  );
 
   /* Component Factories
   ---------- */
 
-  getLabelComponentFor = (child) => {
+  getLabelComponentFor = (tab) => {
     const showLabel = this.getShowLabel();
 
     if (
       showLabel === "always" ||
       showLabel === "only" ||
-      (showLabel === "hover" && this.state.hovered) ||
-      (showLabel === "hover-tabs" && this.state.tabsHovered)
+      (showLabel === "hover" && this.state.hovered)
     ) {
-      return (<span key="label">{child.props.label}</span>)
+      return (<span key="label">{tab.props.label}</span>)
     }
     return null;
   }
 
-  getIconComponentFor = (child) => {
-    const icon = this.getIconFor(child);
+  getIconComponentFor = (tab) => {
+    const icon = this.getIconFor(tab);
     const showLabel = this.getShowLabel();
 
     if (showLabel !== "only") {
@@ -244,21 +168,55 @@ export class Tabs extends react.Component {
     }
     return null;
   };
+
+  /* Class Determiners
+  ---------- */
+
+  getClassForIconLocation = (iconLocation) => {
+    return {
+      "top": " icon-location-vertical",
+      "left": "",
+      "bottom": " icon-location-vertical",
+      "right": ""
+    }[iconLocation];
+  }
+
+  getClassForActiveState = (tabs, tab) => (
+    tabs.active.includes(tab.props.tabid) ?
+      " active" :
+      ""
+  );
 }
 
 /**
- * A wrapper for its children that requires the following props:
- * @prop {string} tabID The ID for this tab. Must be unique across all tabs in this group.
- * @prop {string} name The name for this tab. Will be shown on the tab itself.
- * 
- * The id and className props are forwarded to the underlying element.
+ * Placeholder for a tab's metadata (the tabs are actually rendered by Tabs).
+ * @prop {string} tabid The ID for this tab. Must be unique across all tabs in this group of Tabs.
+ * @prop {string} label The label for this tab. Will be shown on the tab itself.
  */
 export class Tab extends react.Component {
   render() {
+    return null;
+  }
+}
+
+/**
+ * Simple enable/disable switch for tab content based on active status of the tab.
+ * 
+ * This component may be embedded in multiple locations in the component tree to allow
+ * multiple components to be the content for a single logical tab.
+ * 
+ * Requires being in a TabsContext.
+ * 
+ * @prop {string} tabid The ID of the tab this is content for.
+ */
+export class TabContent extends react.Component {
+  render() {
     return (
       <div className="tab-content">
-        {this.props.children}
+        <TabsContext.Consumer>
+          {(tabs) => tabs.active.includes(this.props.tabid) ? this.props.children : null}
+        </TabsContext.Consumer>
       </div>
-    )
+    );
   }
 }
