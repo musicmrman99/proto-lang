@@ -25,16 +25,38 @@ export class Tabs extends react.Component {
         onMouseEnter={this.hoveredIn}
         onMouseLeave={this.hoveredOut}
       >
-        {react.Children.map(this.props.children, this.getTab)}
+        {react.Children.map(this.props.children, (tab) => react.cloneElement(tab, {
+          defaultShowLabel: this.props.showLabel,
+          defaultIconLocation: this.props.iconLocation,
+          defaultActivateEvent: this.props.activateEvent,
+          defaultDectivateEvent: this.props.deactivateEvent
+        }))}
       </div>
     );
   }
 
-  getTab = (tab) => {
+  /* Actions
+  -------------------- */
+
+  hoveredIn = () => {
+    this.setState({hovered: true});
+  }
+  hoveredOut = () => {
+    this.setState({hovered: false});
+  }
+}
+
+/**
+ * Placeholder for a tab's metadata (the tabs are actually rendered by Tabs).
+ * @prop {string} tabid The ID for this tab. Must be unique across all tabs in this group of Tabs.
+ * @prop {string} label The label for this tab. Will be shown on the tab itself.
+ */
+export class Tab extends react.Component {
+  render() {
     const iconLocation = this.getIconLocation();
 
-    const labelElem = this.getLabelComponentFor(tab);
-    const iconElem = this.getIconComponentFor(tab);
+    const labelElem = this.getLabelComponent();
+    const iconElem = this.getIconComponent();
 
     let content = [];
     switch (iconLocation) {
@@ -52,31 +74,22 @@ export class Tabs extends react.Component {
     return (
       <TabsContext.Consumer>
         {(tabs) => {
-          // Ensure mutual exclusion of activate and deactivate functions if
-          // the events they run on are the same.
-          let activateFn = () => tabs.activate(tab.props.tabid);
-          let deactivateFn = () => tabs.deactivate(tab.props.tabid);
-          if (this.props.activateEvent === this.props.deactivateEvent) {
-            activateFn = () => this.toggleActive(tabs, tab.props.tabid);
-            deactivateFn = () => this.toggleActive(tabs, tab.props.tabid);
-          }
-
           return (
             <button {...{
-              "key": tab.props.tabid,
-              "id": tab.props.id,
+              "key": this.props.tabid,
+              "id": this.props.id,
               "className": (
                 // Our classes
                 "tab" +
-                this.getClassForActiveState(tabs, tab) +
+                this.getClassForActiveState(tabs) +
                 this.getClassForIconLocation(iconLocation) +
 
                 // Given classes
-                (tab.props.className != null ? " "+tab.props.className : "")
+                (this.props.className != null ? " "+this.props.className : "")
               ),
 
-              [this.props.activateEvent]: activateFn,
-              [this.props.deactivateEvent]: deactivateFn
+              [this.getActivateEvent()]: this.getActivateFn(tabs),
+              [this.getDeactivateEvent()]: this.getDeactivateFn(tabs)
             }}>
               {content}
             </button>
@@ -104,44 +117,57 @@ export class Tabs extends react.Component {
     }
   }
 
-  hoveredIn = () => {
-    this.setState({hovered: true});
-  }
-  hoveredOut = () => {
-    this.setState({hovered: false});
-  }
-
   /* Utils
   -------------------- */
 
   /* Props
   ---------- */
 
-  getShowLabel = () => (
-    this.props.showLabel != null ?
-      this.props.showLabel :
-      "always"
-  )
+  getActivateEvent = () => {
+    if (this.props.activateEvent != null) return this.props.activateEvent;
+    if (this.props.defaultActivateEvent != null) return this.props.defaultActivateEvent;
+    return "onClick";
+  }
 
-  getIconLocation = () => (
-    this.props.iconLocation != null ?
-      this.props.iconLocation :
-      "left"
-  );
+  getDeactivateEvent = () => {
+    if (this.props.deactivateEvent != null) return this.props.deactivateEvent;
+    if (this.props.defaultDectivateEvent != null) return this.props.defaultDectivateEvent;
+    return "onClick";
+  }
 
-  /* Coupled Props
+  getShowLabel = () => {
+    if (this.props.showLabel != null) return this.props.showLabel;
+    if (this.props.defaultShowLabel != null) return this.props.defaultShowLabel;
+    return "always";
+  }
+
+  getIconLocation = () => {
+    if (this.props.iconLocation != null) return this.props.iconLocation;
+    if (this.props.defaultIconLocation != null) return this.props.defaultIconLocation;
+    return "left";
+  };
+
+  /* Activation and Deactivation Functions
   ---------- */
 
-  getIconFor = (tab) => (
-    tab.props.icon != null ?
-      tab.props.icon :
-      null // Undefined -> Null
+  // Ensure mutual exclusion of activate and deactivate functions if
+  // the events they run on are the same.
+
+  getActivateFn = (tabs) => (
+    this.getActivateEvent() === this.getDeactivateEvent() ?
+      () => this.toggleActive(tabs, this.props.tabid) :
+      () => tabs.activate(this.props.tabid)
+  )
+  getDeactivateFn = (tabs) => (
+    this.getActivateEvent() === this.getDeactivateEvent() ?
+      () => this.toggleActive(tabs, this.props.tabid) :
+      () => tabs.deactivate(this.props.tabid)
   )
 
   /* Component Factories
   ---------- */
 
-  getLabelComponentFor = (tab) => {
+  getLabelComponent = () => {
     const showLabel = this.getShowLabel();
 
     if (
@@ -149,13 +175,13 @@ export class Tabs extends react.Component {
       showLabel === "only" ||
       (showLabel === "hover" && this.state.hovered)
     ) {
-      return (<span key="label">{tab.props.label}</span>)
+      return (<span key="label">{this.props.label}</span>)
     }
     return null;
   }
 
-  getIconComponentFor = (tab) => {
-    const icon = this.getIconFor(tab);
+  getIconComponent = () => {
+    const icon = this.props.icon != null ? this.props.icon : null;
     const showLabel = this.getShowLabel();
 
     if (showLabel !== "only") {
@@ -181,22 +207,11 @@ export class Tabs extends react.Component {
     }[iconLocation];
   }
 
-  getClassForActiveState = (tabs, tab) => (
-    tabs.active.includes(tab.props.tabid) ?
+  getClassForActiveState = (tabs) => (
+    tabs.active.includes(this.props.tabid) ?
       " active" :
       ""
   );
-}
-
-/**
- * Placeholder for a tab's metadata (the tabs are actually rendered by Tabs).
- * @prop {string} tabid The ID for this tab. Must be unique across all tabs in this group of Tabs.
- * @prop {string} label The label for this tab. Will be shown on the tab itself.
- */
-export class Tab extends react.Component {
-  render() {
-    return null;
-  }
 }
 
 /**
