@@ -22,7 +22,7 @@ export default class Toolbar extends react.Component {
           Run
         </button>
 
-        <Tabs iconLocation="top" showLabel="always" activateEvent="onClick" deactivateEvent="onClick">
+        <Tabs iconLocation="top">
           <Tab tabid="build-config" label="Build Config" icon="build" />
           <Tab tabid="build-log" label="Build Log" icon="receipt_long" />
           <Tab tabid="program-input" label="Program Input" icon="input" />
