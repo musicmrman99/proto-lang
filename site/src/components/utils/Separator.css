@@ -1,0 +1,47 @@
+.separator {
+    align-self: stretch;
+    min-height: 50px;
+    margin: 10px 0;
+
+    display: flex;
+}
+.separator.main-axis {
+    align-self: center;
+    margin: 0 10px;
+    min-height: 0;
+    min-width: 50px;
+}
+
+.separator .bar {
+    border: 2px solid var(--background-dark);
+    border-radius: 1px;
+    flex-grow: 1;
+}
+.separator.transparent .bar {
+    border: none;
+}
+
+.separator.small .spacer { flex-basis: 10px; }
+.separator.small { min-width: 20px } /* 10*2 */
+.separator.small.main-axis { min-width: 70px } /* 50 + 10*2 */
+
+.separator.medium .spacer { flex-basis: 25px; }
+.separator.medium { min-width: 50px } /* 25*2 */
+.separator.medium.main-axis { min-width: 100px } /* 50 + 25*2 */
+
+.separator.large .spacer { flex-basis: 50px; }
+.separator.large { min-width: 100px } /* 50*2 */
+.separator.large.main-axis { min-width: 150px } /* 50 + 50*2 */
+
+/* Grow the whole separator */
+.separator.expand { flex-grow: 1; }
+/* bar along cross-axis: <          |          >
+   - shrink bar along main axis
+   - grow space along main axis */
+.separator.expand .bar { flex-grow: 0; }
+.separator.expand .spacer { flex-grow: 1; }
+/* bar along main-axis: < ------------------- >
+   - grow bar along main axis
+   - shrink space along main axis */
+.separator.expand.main-axis .bar { flex-grow: 1; }
+.separator.expand.main-axis .spacer { flex-grow: 0; }

@@ -2,6 +2,7 @@ import react from 'react';
 import './Toolbar.css';
 
 import Button from './utils/Button';
+import Separator from './utils/Separator';
 import { Tabs, Tab } from "./utils/Tabs";
 
 import commands from '../core/Commands';
@@ -22,6 +23,9 @@ export default class Toolbar extends react.Component {
           onClick={() => this.props.onRun(commands.run(this.props.ast, this.props.programInput))}
         />
 
+        <Separator spacing="large" />
+
+        <h2>Panes</h2>
         <Tabs iconLocation="top">
           <Tab tabid="build-config" label="Build Config" icon="build" />
           <Tab tabid="build-log" label="Build Log" icon="receipt_long" />
