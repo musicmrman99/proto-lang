@@ -1,6 +1,7 @@
 import react from 'react';
 import './Toolbar.css';
 
+import Button from './utils/Button';
 import { Tabs, Tab } from "./utils/Tabs";
 
 import commands from '../core/Commands';
@@ -10,17 +11,16 @@ export default class Toolbar extends react.Component {
     return (
       <div className="toolbar">
         <h2>Tools</h2>
-        <button onClick={() => this.props.onBuild(...commands.build(this.props.protoSource, this.props.buildConfig))}>
-          <span className="material-symbols-outlined">construction</span>
-          <br />
-          Build
-        </button>
-
-        <button onClick={() => this.props.onRun(commands.run(this.props.ast, this.props.programInput))}>
-          <span className="material-symbols-outlined">settings</span>
-          <br />
-          Run
-        </button>
+        <Button
+          label="Build" icon="construction"
+          iconLocation="top"
+          onClick={() => this.props.onBuild(...commands.build(this.props.protoSource, this.props.buildConfig))}
+        />
+        <Button
+          label="Run" icon="settings"
+          iconLocation="top"
+          onClick={() => this.props.onRun(commands.run(this.props.ast, this.props.programInput))}
+        />
 
         <Tabs iconLocation="top">
           <Tab tabid="build-config" label="Build Config" icon="build" />
