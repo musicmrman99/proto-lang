@@ -18,23 +18,7 @@
 /* Tab
 -------------------- */
 
-.tab {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-}
-.tab.icon-location-vertical {
-    flex-direction: column;
-}
-
-.tab.active {
-    background-color: var(--background-very-light);
-}
-
-.tab > .icon {
-    padding: 5px;
-}
+/* None */
 
 /* TabContent
 -------------------- */

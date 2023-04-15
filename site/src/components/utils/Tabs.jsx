@@ -1,5 +1,6 @@
 import react from "react";
 import './Tabs.css';
+import Button from "./Button";
 
 export const TabsContext = react.createContext();
 
@@ -29,7 +30,9 @@ export class Tabs extends react.Component {
           defaultShowLabel: this.props.showLabel,
           defaultIconLocation: this.props.iconLocation,
           defaultActivateEvent: this.props.activateEvent,
-          defaultDectivateEvent: this.props.deactivateEvent
+          defaultDectivateEvent: this.props.deactivateEvent,
+
+          tabsHovered: this.state.hovered
         }))}
       </div>
     );
@@ -53,46 +56,33 @@ export class Tabs extends react.Component {
  */
 export class Tab extends react.Component {
   render() {
-    const iconLocation = this.getIconLocation();
-
-    const labelElem = this.getLabelComponent();
-    const iconElem = this.getIconComponent();
-
-    let content = [];
-    switch (iconLocation) {
-      case "top":
-      case "left":
-        content = [iconElem, labelElem]; break;
-
-      case "bottom":
-      case "right":
-        content = [labelElem, iconElem]; break;
-
-      default:
-    }
-
     return (
       <TabsContext.Consumer>
         {(tabs) => {
           return (
-            <button {...{
-              "key": this.props.tabid,
-              "id": this.props.id,
-              "className": (
+            <Button
+              id={this.props.id}
+              key={this.props.tabid}
+
+              label={this.getLabel()}
+              icon={this.getIcon()}
+              showLabel={this.getShowLabel()}
+              iconLocation={this.getIconLocation()}
+
+              className={(
                 // Our classes
                 "tab" +
                 this.getClassForActiveState(tabs) +
-                this.getClassForIconLocation(iconLocation) +
 
                 // Given classes
                 (this.props.className != null ? " "+this.props.className : "")
-              ),
+              )}
 
-              [this.getActivateEvent()]: this.getActivateFn(tabs),
-              [this.getDeactivateEvent()]: this.getDeactivateFn(tabs)
-            }}>
-              {content}
-            </button>
+              {...{
+                [this.getActivateEvent()]: this.getActivateFn(tabs),
+                [this.getDeactivateEvent()]: this.getDeactivateFn(tabs)
+              }}
+            />
           );
         }}
       </TabsContext.Consumer>
@@ -136,16 +126,36 @@ export class Tab extends react.Component {
   }
 
   getShowLabel = () => {
-    if (this.props.showLabel != null) return this.props.showLabel;
-    if (this.props.defaultShowLabel != null) return this.props.defaultShowLabel;
-    return "always";
+    let showLabel = "always";
+    if (this.props.defaultShowLabel != null) showLabel = this.props.defaultShowLabel;
+    if (this.props.showLabel != null) showLabel = this.props.showLabel;
+
+    // Extra functionality of Tabs over plain Buttons
+    if (showLabel === "hover") {
+      showLabel = "never";
+      if (this.props.tabsHovered) showLabel = "always";
+    }
+
+    return showLabel;
   }
 
   getIconLocation = () => {
     if (this.props.iconLocation != null) return this.props.iconLocation;
     if (this.props.defaultIconLocation != null) return this.props.defaultIconLocation;
     return "left";
-  };
+  }
+
+  getLabel = () => (
+    this.props.label != null ?
+      this.props.label :
+      null // Undefined -> null
+  )
+
+  getIcon = () => (
+    this.props.icon != null ?
+      this.props.icon :
+      null // Undefined -> null
+  )
 
   /* Activation and Deactivation Functions
   ---------- */
@@ -164,48 +174,8 @@ export class Tab extends react.Component {
       () => tabs.deactivate(this.props.tabid)
   )
 
-  /* Component Factories
-  ---------- */
-
-  getLabelComponent = () => {
-    const showLabel = this.getShowLabel();
-
-    if (
-      showLabel === "always" ||
-      showLabel === "only" ||
-      (showLabel === "hover" && this.state.hovered)
-    ) {
-      return (<span key="label">{this.props.label}</span>)
-    }
-    return null;
-  }
-
-  getIconComponent = () => {
-    const icon = this.props.icon != null ? this.props.icon : null;
-    const showLabel = this.getShowLabel();
-
-    if (showLabel !== "only") {
-      return (
-        // Show even if icon is null to allow for space-between alignment, but drop the padding
-        <span key="icon" className={icon != null ? "icon material-symbols-outlined" : ""}>
-          {icon}
-        </span>
-      );
-    }
-    return null;
-  };
-
   /* Class Determiners
   ---------- */
-
-  getClassForIconLocation = (iconLocation) => {
-    return {
-      "top": " icon-location-vertical",
-      "left": "",
-      "bottom": " icon-location-vertical",
-      "right": ""
-    }[iconLocation];
-  }
 
   getClassForActiveState = (tabs) => (
     tabs.active.includes(this.props.tabid) ?
