@@ -35,7 +35,7 @@ export default class Button extends react.Component {
   ---------- */
 
   getBaseButtonProps = () => {
-    const {children, showLabel, iconLocation, icon, ...otherProps} = this.props;
+    const {children, label, icon, showLabel, iconLocation, ...otherProps} = this.props;
     return Object.assign(
       // Default
       {},
