@@ -21,6 +21,11 @@
     --info: rgb(208,208,202);
 
     --layout-space: 20px;
+
+    --font-size: 14px;
+    --font-size-h1: 2rem;
+    --font-size-h2: 1.5rem;
+    --font-size-h3: 1.2rem;
 }
 
 /* Structural Rules
@@ -29,6 +34,7 @@
 html, body, #app {
     padding: 0;
     margin: 0;
+    font-size: var(--font-size);
 }
 
 #app {
@@ -68,11 +74,11 @@ h1, h2, h3, h4, h5, h6, p, li, th, td, legend, label, input, textarea, button {
     margin: 0;
     color: white;
     font-family: 'Source Sans Pro', sans-serif;
-    font-size: 0.9em;
+    font-size: 1rem; /* Prevent specific tags from overriding the base font size. */
 }
-h1 { font-size: 2em; }
-h2 { font-size: 1.5em; }
-h3 { font-size: 1.2em; }
+h1 { font-size: var(--font-size-h1); }
+h2 { font-size: var(--font-size-h2); }
+h3 { font-size: var(--font-size-h3); }
 
 input, textarea, button {
     border: none;
