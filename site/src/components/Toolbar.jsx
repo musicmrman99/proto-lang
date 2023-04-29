@@ -11,6 +11,14 @@ export default class Toolbar extends react.Component {
   render() {
     return (
       <div className="toolbar">
+        <div id="brand">
+          <img id="logo" src="/proto-48.png" alt="Proto Logo" />
+          <h1 id="title">Proto<br />IDE</h1>
+        </div>
+
+        <Separator spacing="none" />
+        <Separator spacing="medium" transparent />
+
         <h2>Tools</h2>
         <Button
           label="Build" icon="construction"
@@ -23,7 +31,7 @@ export default class Toolbar extends react.Component {
           onClick={() => this.props.onRun(commands.run(this.props.ast, this.props.programInput))}
         />
 
-        <Separator spacing="large" />
+        <Separator spacing="medium" />
 
         <h2>Panes</h2>
         <Tabs iconLocation="top">
