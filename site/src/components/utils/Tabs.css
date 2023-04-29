@@ -1,28 +1,26 @@
+/* Tabs
+-------------------- */
+
 .tabs {
-    width: 100%;
-    height: 100%;
-
-    display: flex;
-    flex-direction: column;
-    gap: var(--layout-space);
-}
-
-.tab.active {
-    background-color: var(--background-very-light);
-}
-
-.tabs-header {
     display: flex;
     flex-direction: row;
+    align-items: flex-start;
     gap: var(--layout-space);
+}
 
-    padding-bottom: calc(var(--layout-space) / 2);
-    border-bottom: 2px solid var(--background-very-dark);
+.tabs.location-vertical {
+    flex-direction: column;
 }
-.tabs-header > * {
-    flex-grow: 1;
-}
+
+/* Tab
+-------------------- */
+
+/* None */
+
+/* TabContent
+-------------------- */
 
 .tab-content {
-    flex-grow: 1;
+    width: 100%;
+    height: 100%;
 }
