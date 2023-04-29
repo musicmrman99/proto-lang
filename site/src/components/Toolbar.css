@@ -10,3 +10,14 @@
 .toolbar h2 {
     border-bottom: 2px solid var(--background-dark)
 }
+
+.toolbar #brand {
+    display: flex;
+    align-items: center;
+}
+.toolbar #brand #title {
+    font-size: var(--font-size-h3);
+}
+.toolbar #brand #logo {
+    padding: 10px;
+}
