@@ -31,46 +31,54 @@ export const configSchema = {
 
   type: "object",
   properties: {
-    string: {
-      description: "String (\"...\") handling settings",
+    core: {
+      description: "Settings for Proto itself",
 
       type: "object",
       properties: {
-        escapeSequence: {
-          description: "Escape sequence (\\...) handling settings",
+        string: {
+          description: "String (\"...\") handling settings",
 
           type: "object",
           properties: {
-            special: {
-              description: "The policies to apply for all special escape sequences (ie. those which could translate to a different character)",
+            escapeSequence: {
+              description: "Escape sequence (\\...) handling settings",
 
               type: "object",
               properties: {
-                default: {
-                  description: "The default policy to apply for all special escape sequences (ie. those which could translate to a different character)",
-                  "$ref": "#/definitions/specialEscapeSequenceCategory"
-                }
-              }
-            },
+                special: {
+                  description: "The policies to apply for all special escape sequences (ie. those which could translate to a different character)",
 
-            literal: {
-              description: "The policies to apply for all non-special escape sequences (ie. those which translate to the literal character after the backslash)",
+                  type: "object",
+                  properties: {
+                    default: {
+                      description: "The default policy to apply for all special escape sequences (ie. those which could translate to a different character)",
+                      "$ref": "#/definitions/specialEscapeSequenceCategory"
+                    }
+                  }
+                },
 
-              type: "object",
-              properties: {
-                default: {
-                  description: "The default policy to apply for all non-special escape sequences (ie. those which translate to the literal character after the backslash)",
-                  "$ref": "#/definitions/literalEscapeSequenceCategory"
-                },
-                openCloseString: {
-                  description: "The policy to apply for escaped \" (double-quote)",
-                  "$ref": "#/definitions/literalEscapeSequenceCategory"
-                },
-                openEscapeSequence: {
-                  description: "The policy to apply for escaped \\ (backslash)",
-                  "$ref": "#/definitions/literalEscapeSequenceCategory"
+                literal: {
+                  description: "The policies to apply for all non-special escape sequences (ie. those which translate to the literal character after the backslash)",
+
+                  type: "object",
+                  properties: {
+                    default: {
+                      description: "The default policy to apply for all non-special escape sequences (ie. those which translate to the literal character after the backslash)",
+                      "$ref": "#/definitions/literalEscapeSequenceCategory"
+                    },
+                    openCloseString: {
+                      description: "The policy to apply for escaped \" (double-quote)",
+                      "$ref": "#/definitions/literalEscapeSequenceCategory"
+                    },
+                    openEscapeSequence: {
+                      description: "The policy to apply for escaped \\ (backslash)",
+                      "$ref": "#/definitions/literalEscapeSequenceCategory"
+                    }
+                  }
                 }
-              }
+              },
+              additionalProperties: false
             }
           },
           additionalProperties: false
@@ -83,15 +91,17 @@ export const configSchema = {
 };
 
 export const configDefault = {
-  string: {
-    escapeSequence: {
-      special: {
-        default: "translate-special"
-      },
-      literal: {
-        default: "drop",
-        openCloseString: "translate-literal",
-        openEscapeSequence: "translate-literal"
+  core: {
+    string: {
+      escapeSequence: {
+        special: {
+          default: "translate-special"
+        },
+        literal: {
+          default: "drop",
+          openCloseString: "translate-literal",
+          openEscapeSequence: "translate-literal"
+        }
       }
     }
   }
