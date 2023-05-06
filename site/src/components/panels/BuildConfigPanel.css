@@ -1,4 +1,21 @@
-#build-config-panel > .codebox {
-    width: 100%;
-    height: 100%;
+#build-config-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--layout-space);
 }
+#build-config-panel > .codebox {
+    flex-grow: 1;
+}
+
+#build-config-panel #add-config-option-form {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        'label label'
+        'dropdown button';
+    column-gap: var(--layout-space);
+}
+
+#build-config-panel #add-config-option-form #add-config-option-label { grid-area: label; }
+#build-config-panel #add-config-option-form #add-config-option-dropdown { grid-area: dropdown; }
+#build-config-panel #add-config-option-form #add-config-option-button { grid-area: button; }
