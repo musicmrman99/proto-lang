@@ -1,6 +1,8 @@
 import react from 'react';
 import './Message.css';
 
+import Button from './Button';
+
 /**
  * A graphical message.
  * 
@@ -14,10 +16,23 @@ import './Message.css';
  * under the type paragraph, each with the CSS class `message-line`. There is a default
  * style for this class, but it may be overriden.
  * 
+ * Note that the props of a message should be *immutable* - once a message is given, it
+ * cannot be un-given. As such, if they are needed at all, keys for Messages must always
+ * be UUIDs.
+ * 
  * @prop {string} type The optional type of the message.
  * @prop {string} children The message contents.
  */
 export default class Message extends react.Component {
+  constructor(props) {
+    super(props);
+
+    const splitChildren = this.getSplitChildren(this.props.children);
+    this.state = {
+      expanded: splitChildren.length > 1
+    };
+  }
+
   render() {
     const typeComponent = this.props.type != null ? (
       <span className={this.props.type+" message-type"}>
@@ -25,19 +40,30 @@ export default class Message extends react.Component {
       </span>
     ) : null;
 
-    const splitChildren = react.Children.toArray(this.props.children)
-      .flatMap((child) => typeof child === "string" ? child.split("\n") : [child]);
+    const splitChildren = this.getSplitChildren(this.props.children);
 
-    return (
-      <div className="message">
-        <p>{typeComponent}
-          {(splitChildren.length === 1 ? (<> &rarr; {this.props.children}</>) : null)}
-          {(splitChildren.length > 1 ? (<> &darr;</>) : null)}
-        </p>
-        {splitChildren.length > 1 ? splitChildren.map((child) => (
-          <p className="message-line">{child}</p>
-        )) : null}
+    return [
+      splitChildren.length > 1 ? (
+        <Button
+          className="message-control"
+          showLabel="only" iconLocation="bottom" inline compact
+          label={this.state.expanded ? <>&darr;</> : <>&rarr;</>}
+          onClick={() => this.setState({ expanded: !this.state.expanded })}
+        ></Button>
+      ) : (
+        <span />
+      ),
+
+      <p className="message-type">{typeComponent}</p>,
+
+      <div className="message-content">
+        {splitChildren.map((child) => (
+          <p>{child}</p>
+        ))}
       </div>
-    );
+    ];
   }
+
+  getSplitChildren = (children) => react.Children.toArray(children)
+    .flatMap((child) => typeof child === "string" ? child.split("\n") : [child]);
 }

@@ -127,7 +127,7 @@ const commands = {
         if (!(e instanceof RuntimeError)) throw e;
 
         output.push(
-          new Message("Runtime Error: " + e.message)
+          new Message("error", "Runtime Error: " + e.message)
         );
       }
     }

@@ -4,6 +4,7 @@ import './BuildLogPanel.css';
 import Message from '../utils/Message';
 
 import Panel from './Panel';
+import MessageList from '../utils/MessageList';
 
 export default class BuildLogPanel extends react.Component {
   render() {
@@ -16,11 +17,13 @@ export default class BuildLogPanel extends react.Component {
             [false]: "invalid"
           }[this.props.buildLog.success]
         }>
-          {this.props.buildLog.output.map((message, i) => (
-            <Message type={message.type} key={i}>
-              {message.content}
-            </Message>
-          ))}
+          <MessageList>
+            {this.props.buildLog.output.map((message) => (
+              <Message type={message.type} key={message.key}>
+                {message.content}
+              </Message>
+            ))}
+          </MessageList>
         </div>
       </Panel>
     );
