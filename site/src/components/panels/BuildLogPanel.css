@@ -1,4 +1,4 @@
-#build-log-panel > .codebox {
+#build-log-panel .codebox {
     width: 100%;
     height: 100%;
 
@@ -6,3 +6,8 @@
     background-color: var(--background-light);
     overflow: auto;
 }
+
+#build-log-panel .success.message-type { color: var(--success) }
+#build-log-panel .error.message-type { color: var(--failure) }
+#build-log-panel .warning.message-type { color: var(--warning) }
+#build-log-panel .info.message-type { color: var(--info) }
