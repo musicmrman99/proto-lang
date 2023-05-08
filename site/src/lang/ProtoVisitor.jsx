@@ -46,7 +46,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             (frac != null ? frac.getText() : "")
         ));
     }
-	visitString_literal = (ctx) => new repr.String(ctx.STRING_LITERAL().getText().slice(1, -1)); // Remove the quotes
+	visitText_literal = (ctx) => new repr.Text(ctx.TEXT_LITERAL().getText().slice(1, -1)); // Remove the quotes
 	visitLogical_literal = (ctx) => new repr.Logical(ctx.LOGICAL_LITERAL().getText() === "true");
 
     // Translate parameters into their AST representation
@@ -189,19 +189,19 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         /*
         Details of the algorithm:
 
-        +-----------------------------------------------------------------------------+
-        |                                    |                 Effect                 |
-        +              Symbol(s)             +----------------------------------------+
-        |                                    |        Expr        |        Decl       |
-        |-----------------------------------------------------------------------------|
-        | fragment                           | buffer + continue  | buffer + continue |
-        | number, string, logical, parameter | hard nesting       | ERROR             |
-        | map, block                         | hard nesting       | ERROR             |
-        | association operator               | hard terminator    | ERROR             |
-        | soft terminator                    | soft terminator    | ERROR             |
-        | placeholder operator               | ERROR              | placeholder       |
-        | declaration operator               | ERROR              | terminator (decl) |
-        +-----------------------------------------------------------------------------+
+        +---------------------------------------------------------------------------+
+        |                                  |                 Effect                 |
+        +              Symbol(s)           +----------------------------------------+
+        |                                  |        Expr        |        Decl       |
+        |---------------------------------------------------------------------------|
+        | fragment                         | buffer + continue  | buffer + continue |
+        | number, text, logical, parameter | hard nesting       | ERROR             |
+        | map, block                       | hard nesting       | ERROR             |
+        | association operator             | hard terminator    | ERROR             |
+        | soft terminator                  | soft terminator    | ERROR             |
+        | placeholder operator             | ERROR              | placeholder       |
+        | declaration operator             | ERROR              | terminator (decl) |
+        +---------------------------------------------------------------------------+
 
         "Effect" Key
         --------------------

@@ -10,7 +10,7 @@ program : newline? expression_atom+ EOF ;
 expression_atom : (
     // Values (Literals and Syntactic Expressions)
     number_literal
-  | string_literal
+  | text_literal
   | logical_literal
   | map_literal
   | block_literal
@@ -37,7 +37,7 @@ comment_block : OPEN_COMMENT_BLOCK (~CLOSE_COMMENT_BLOCK)* CLOSE_COMMENT_BLOCK ;
 
 // Values (Literals and Syntactic Expressions)
 number_literal : INT_LITERAL (DECIMAL_POINT INT_LITERAL)? ;
-string_literal : STRING_LITERAL ;
+text_literal : TEXT_LITERAL ;
 logical_literal : LOGICAL_LITERAL ;
 
 map_expression_atom : (

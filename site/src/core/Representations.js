@@ -128,7 +128,7 @@ export class Number extends Repr {
     toString = () => this.value.toString();
 }
 
-export class String extends Repr {
+export class Text extends Repr {
     constructor(value) {
         super();
         this.value = value;
@@ -194,7 +194,7 @@ export const isBlock = (node) => node != null && node.constructor === Block;
 export const isLiteral = (node) => node != null && (
     [
         Number,
-        String,
+        Text,
         Logical,
         Map,
         Block
@@ -226,7 +226,7 @@ export const repr = Object.freeze({
     Declaration,
     Parameter,
     Number,
-    String,
+    Text,
     Logical,
     Map,
     Block
