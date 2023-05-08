@@ -17,7 +17,9 @@ export default class BuildConfigPanel extends react.Component {
         JSON.stringify(this.props.buildConfigOverride, null, 2) :
         "",
 
-      selectedConfigOption: Object.keys(this.flattenPaths(this.props.buildConfig, "."))[0]
+      selectedConfigOption: this.props.buildConfig != null ?
+        Object.keys(this.flattenPaths(this.props.buildConfig, "."))[0] :
+        "" // Won't exist, but HTML will ignore it
     };
   }
 
@@ -32,9 +34,12 @@ export default class BuildConfigPanel extends react.Component {
             value={this.state.selectedConfigOption}
             onChange={(e) => this.setState({selectedConfigOption: e.target.value})
           }>
-            {Object.keys(this.flattenPaths(this.props.buildConfig, ".")).map((path) => (
-              <option key={path} value={path}>{path}</option>
-            ))}
+            {this.props.buildConfig != null ?
+              Object.keys(this.flattenPaths(this.props.buildConfig, ".")).map((path) => (
+                <option key={path} value={path}>{path}</option>
+              )) :
+              null
+            }
           </select>
 
           <Button
