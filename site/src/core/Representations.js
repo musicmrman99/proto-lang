@@ -96,11 +96,7 @@ export class Sentence extends Repr {
     }
 
     length = () => this.parts.reduce((accum, part) => accum + part.length(), 0);
-    toString = () => [
-        "{ SENTENCE (ref: ",
-        this.ref.toString(),
-        ") }"
-    ].join("");
+    toString = () => "{ SENTENCE (ref: "+this.ref.toString()+") }";
 }
 export const isSentence = (node) => node != null && node.constructor === Sentence;
 
@@ -112,7 +108,7 @@ export class Declaration extends Repr {
     }
 
     length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
-    toString = () => "{ DECLARE: "+this.template.map(item => item.toString()).join("")+" }";
+    toString = () => "{ DECLARATION: "+this.template.map(item => item.toString()).join("")+" }";
 }
 export const isDeclaration = (node) => node != null && node.constructor === Declaration;
 
