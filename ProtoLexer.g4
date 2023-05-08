@@ -40,7 +40,6 @@ fragment COMMENT_PERMITTED_CHAR : [\u2500-\u257F] ; // \u2500-\u257F are the box
 // Text - special case
 fragment TEXT_QUOTE : ["] ;
 fragment TEXT_CHAR : ~["] ;
-fragment TEXT_ESCAPE : '\\' . ;
 
 /* Tokens
 -------------------------------------------------- */
@@ -66,7 +65,7 @@ INT_LITERAL : DIGIT+ ;
 DECIMAL_POINT : '.' ;
 
 // Text
-TEXT_LITERAL : TEXT_QUOTE (TEXT_ESCAPE | TEXT_CHAR)* TEXT_QUOTE ;
+TEXT_LITERAL : TEXT_QUOTE TEXT_CHAR* TEXT_QUOTE ;
 
 // Logicals
 LOGICAL_LITERAL : 'true' | 'false' ;
