@@ -45,22 +45,42 @@ export default class Message extends react.Component {
     return [
       splitChildren.length > 1 ? (
         <Button
+          key={this.props.id+"-control"}
           className="message-control"
           showLabel="only" iconLocation="bottom" inline compact
           label={this.state.expanded ? <>&darr;</> : <>&rarr;</>}
           onClick={() => this.setState({ expanded: !this.state.expanded })}
         ></Button>
       ) : (
-        <span />
+        <span key={this.props.id+"-control"} />
       ),
 
-      <p className="message-type">{typeComponent}</p>,
+      (
+        <p
+          className="message-type"
+          key={this.props.id+"-type"}
+        >
+          {typeComponent}
+        </p>
+      ),
 
-      <div className="message-content">
-        {splitChildren.map((child) => (
-          <p>{child}</p>
-        ))}
-      </div>
+      (
+        <div
+          className="message-content"
+          key={this.props.id+"-content"}
+        >
+          {this.state.expanded ? (
+            // Show all children
+            splitChildren.map((child) => (
+              <p>{child}</p>
+            ))
+          ) : (
+            // Show only first child (if any children)
+            <p>{splitChildren[0] != null ? splitChildren[0] : null}</p>
+          )
+          }
+        </div>
+      )
     ];
   }
 

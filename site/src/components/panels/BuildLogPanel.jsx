@@ -19,7 +19,7 @@ export default class BuildLogPanel extends react.Component {
         }>
           <MessageList>
             {this.props.buildLog.output.map((message) => (
-              <Message type={message.type} key={message.key}>
+              <Message type={message.type} id={message.id} key={message.id}>
                 {message.content}
               </Message>
             ))}

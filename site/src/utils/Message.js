@@ -4,9 +4,6 @@ export default class Message {
     constructor(type, content) {
         this.type = type;
         this.content = content;
-
-        // Message keys must always be UUIDs
-        // (see the docs for the Message react component)
-        this.key = uuidv4();
+        this.id = uuidv4();
     }
 }
