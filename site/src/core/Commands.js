@@ -74,11 +74,17 @@ const commands = {
     let tree = null;
     if (log.success) {
       const chars = new InputStream(protoSource, true);
+
+      const errorListener = new ProtoErrorListener(buildConfig, log);
+
       const lexer = new ProtoLexer(chars);
+      lexer.removeErrorListeners();
+      lexer.addErrorListener(errorListener);
       const tokens  = new CommonTokenStream(lexer);
+
       const parser = new ProtoParser(tokens);
       parser.removeErrorListeners();
-      parser.addErrorListener(new ProtoErrorListener(buildConfig, log));
+      parser.addErrorListener(errorListener);
       tree = parser.program();
     }
 
