@@ -45,7 +45,7 @@ export default class BuildConfigPanel extends react.Component {
           <Button
             id="add-config-option-button"
             label="Add" icon="add"
-            showLabel="never"
+            showLabel="never" compact
             onClick={() => this.addConfigOverrideOption(this.state.selectedConfigOption)}
           />
         </div>
