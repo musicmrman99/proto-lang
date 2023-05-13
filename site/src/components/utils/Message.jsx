@@ -85,5 +85,48 @@ export default class Message extends react.Component {
   }
 
   getSplitChildren = (children) => react.Children.toArray(children)
-    .flatMap((child) => typeof child === "string" ? child.split("\n") : [child]);
+    .flatMap((child) =>
+      child.toString() // If child is not a string, convert it to a string
+        .split("\n")   // Split lines
+        .flatMap(      // Split long lines
+          (childStr) => this.splitter(childStr, 50)
+        )
+    );
+
+  // Based on: https://stackoverflow.com/a/7624821
+  splitter = (str, maxLen, breakAfterChars, breakRemChars) => {
+    if (str == null) throw new Error("splitter(): must provide a string to split");
+    if (maxLen == null) throw new Error("splitter(): must provide a maximum length to split using");
+    if (breakAfterChars == null) breakAfterChars = "()[]{}<>-/\\|:,."; // Not [_]
+    if (breakRemChars == null) breakRemChars = " \t\n";
+
+    console.log(breakRemChars);
+    const breakAfterCharsArr = breakAfterChars.match(/(.|\n){1}/g);
+    const breakRemCharsArr = breakRemChars.match(/(.|\n){1}/g);
+
+    const strs = [];
+    while (str.length > maxLen) {
+      // Find the next position to take the string up to
+      const splitStr = str.substring(0, maxLen);
+      const breakAfterPos = Math.max(...breakAfterCharsArr.map((char) => splitStr.lastIndexOf(char)));
+      const breakRemPos = Math.max(...breakRemCharsArr.map((char) => splitStr.lastIndexOf(char)));
+
+      let highestBreakPos = Math.max(breakAfterPos, breakRemPos);
+      if (highestBreakPos < 0) highestBreakPos = null; // Don't match any of them if none are found
+
+      // If any matches are found, pick the longest match in order of precedence,
+      // then cut off the matched part according to its char type.
+      let [breakPos, continuePos] = [maxLen, maxLen];
+      if (breakRemPos >= 0 && highestBreakPos === breakRemPos) {
+        [breakPos, continuePos] = [breakRemPos, breakRemPos+1]
+      } else if (breakAfterPos >= 0 && highestBreakPos === breakAfterPos) {
+        [breakPos, continuePos] = [breakAfterPos+1, breakAfterPos+1]
+      }
+      strs.push(str.substring(0, breakPos));
+      str = str.substring(continuePos);
+    }
+    strs.push(str);
+
+    return strs;
+  }
 }
