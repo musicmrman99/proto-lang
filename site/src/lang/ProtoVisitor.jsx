@@ -1,7 +1,7 @@
 import Message from '../utils/Message';
 import ProtoParserVisitor from './build/ProtoParserVisitor';
 
-import { repr, is, format } from '../core/Representations';
+import { repr, is, format, isDeclaration } from '../core/Representations';
 
 /* Parser
 -------------------------------------------------- */
@@ -237,7 +237,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // relevant Repr.
         const isImpossible = (value) => value === false;
         const isPossible = (value) => value === true;
-        const isActual = (value) => value !== true && value !== false;
+        const isActual = (value) => isDeclaration(value);
 
         // A buffer for collected nodes until a valid syntactic construct is found
         // (eg. a complete sentence, declaration operator, association operator, etc.),
@@ -260,7 +260,16 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             if (sentence !== null) {
                 if (isActual(declTemplate)) {
                     const decl = new repr.Declaration(declTemplate, sentence);
+
+                    // Must be in set of static declarations for senteces to be parsed
+                    // (ie. the this.parseSentence() algorithm used above).
                     nestableNode.decls.push(decl);
+
+                    // Senteces in declarations must be evaluated at the site of declaration,
+                    // not the site of usage, for closures to work properly.
+                    finalChildren.decls.push(decl);
+
+                    // We're now out of the 'value of a declaration' context, so further declarations are allowed.
                     declTemplate = true;
 
                     this.log.output.push(new Message("info", "New Declaration: " + decl.toString()));
@@ -467,7 +476,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         for (const [decl, sentenceCandidate] of sortedTemplateMatches) {
             // 2.1) Recursive Case: Try to parse each argument of the sentence (to get the
             //      best matching sub-sentence) to form a full sentence.
-            let fullSentence = new repr.Sentence(decl.ref, []);
+            let fullSentence = new repr.Sentence(decl, []);
             for (const node of sentenceCandidate) {
                 if (node === null) {
                     fullSentence = null;

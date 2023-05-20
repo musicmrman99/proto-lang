@@ -89,9 +89,9 @@ export const isArgument = (node) => node != null && node.constructor === Argumen
 // Sentence + Declaration
 
 export class Sentence extends Repr {
-    constructor(ref, params) {
+    constructor(decl, params) {
         super();
-        this.ref = ref;
+        this.decl = decl;
         this.params = params;
     }
 
@@ -101,13 +101,13 @@ export class Sentence extends Repr {
 export const isSentence = (node) => node != null && node.constructor === Sentence;
 
 export class Declaration extends Repr {
-    constructor(template, ref) {
+    constructor(template, sentence) {
         super();
         this.template = template;
-        this.ref = ref;
+        this.sentence = sentence;
     }
 
-    length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
+    length = () => this.template.map(item => item.length()).reduce((accum, len) => accum + len, 0) + this.sentence.length();
     toString = () => "{ DECLARATION: "+this.template.map(item => item.toString()).join("")+" }";
 }
 export const isDeclaration = (node) => node != null && node.constructor === Declaration;
@@ -198,15 +198,15 @@ export const isLiteral = (node) => node != null && (
 );
 
 /* Composite Utils
--------------------- */
+-------------------------------------------------- */
 
 export const isValue = (node) => isLiteral(node) || isParameter(node);
 export const isNestable = (node) => isMap(node) || isBlock(node) || isParameter(node);
 export const isTerminator = (node) => isSoftTerminator(node) || isAssociationOp(node);
 export const hasDeclarations = (node) => isBlock(node);
 
-/* Export Default
--------------------- */
+/* Exports
+-------------------------------------------------- */
 
 export const repr = Object.freeze({
     Repr,
