@@ -1,0 +1,9 @@
+.message-list {
+    max-height: 100%;
+    overflow: auto;
+
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    grid-template-rows: 1fr;
+    column-gap: 10px;
+}

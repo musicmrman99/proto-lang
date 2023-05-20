@@ -1,7 +1,7 @@
 # person | : symbolic typed using type {
 #     transform
 #         extract all [
-#             "name" --> string,
+#             "name" --> text,
 #             "dob" --> date
 #         ] from @1
 #     to associated value in [
@@ -10,7 +10,7 @@
 #     ]
 # }
 person | : symbolic type from [
-    "name" --> string,
+    "name" --> text,
     "dob" --> date
 ]
 person : { using person | }
@@ -22,7 +22,7 @@ person called | born on | : {
 }
 
 dog | : symbolic type from [
-    "name" --> string,
+    "name" --> text,
     "dob" --> date,
     "owner" --> person
 ]

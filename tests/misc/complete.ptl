@@ -1,6 +1,6 @@
 # Simple Practical example
 politely say | : {
-  greeting : mutable extract ["milord"] from @2["greeting" --> string]
+  greeting : mutable extract ["milord"] from @2["greeting" --> text]
   if greeting is [] then
     say combination of [@1, ", ", greeting]
   otherwise

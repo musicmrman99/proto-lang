@@ -4,17 +4,20 @@ import './ProgramOutputPanel.css';
 import Panel from './Panel';
 
 import Message from '../utils/Message';
+import MessageList from '../utils/MessageList';
 
 export default class ProgramOutputPanel extends react.Component {
   render() {
     return (
       <Panel id="program-output-panel">
         <div className="codebox">
-          {this.props.programOutput.map((message, i) => (
-            <Message type={message.type} key={i}>
-              {message.content}
-            </Message>
-          ))}
+          <MessageList>
+            {this.props.programOutput.map((message) => (
+              <Message type={message.type} key={message.key}>
+                {message.content}
+              </Message>
+            ))}
+          </MessageList>
         </div>
       </Panel>
     );

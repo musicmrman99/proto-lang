@@ -4,6 +4,8 @@ import './Button.css';
 export default class Button extends react.Component {
   render() {
     const iconLocation = this.getIconLocation();
+    const compact = this.getCompact();
+    const inline = this.getInline();
 
     const labelElem = this.getLabelComponent();
     const iconElem = this.getIconComponent();
@@ -34,6 +36,8 @@ export default class Button extends react.Component {
           // Our classes
           "button" +
           this.getClassForIconLocation(iconLocation) +
+          this.getClassForCompact(compact) +
+          this.getClassForInline(inline) +
 
           // Given classes
           (this.props.className != null ? " "+this.props.className : "")
@@ -55,7 +59,23 @@ export default class Button extends react.Component {
   ---------- */
 
   getInheritableProps = () => {
-    const {children, label, icon, showLabel, iconLocation, ...otherProps} = this.props;
+    const {
+      // React
+      children,
+
+      // Content
+      label,
+      icon,
+
+      // Layout
+      showLabel,
+      iconLocation,
+      compact,
+      inline,
+
+      ...otherProps
+    } = this.props;
+
     return otherProps;
   }
 
@@ -70,7 +90,19 @@ export default class Button extends react.Component {
       this.props.iconLocation :
       "left"
   )
-  
+
+  getCompact = () => (
+    this.props.compact != null ?
+      true :
+      false
+  )
+
+  getInline = () => (
+    this.props.inline != null ?
+      true :
+      false
+  )
+
   /* Component Factories
   ---------- */
 
@@ -111,5 +143,13 @@ export default class Button extends react.Component {
       "bottom": " icon-location-vertical",
       "right": ""
     }[iconLocation];
+  }
+
+  getClassForInline = (inline) => {
+    return inline ? " inline" : "";
+  }
+
+  getClassForCompact = (compact) => {
+    return compact ? " compact" : "";
   }
 }

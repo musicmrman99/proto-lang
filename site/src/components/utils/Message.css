@@ -1,6 +1,0 @@
-.build-type { color: var(--info) }
-
-.build-success { color: var(--success) }
-.build-error { color: var(--failure) }
-.build-warning { color: var(--warning) }
-.build-notice { color: var(--info) }

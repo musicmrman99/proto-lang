@@ -1,5 +1,5 @@
 #language-space {
-    height: 100%;
+    overflow: auto;
     flex-grow: 1;
 
     display: flex;
@@ -12,5 +12,6 @@
 }
 
 #language-space > .codebox {
+    overflow: auto;
     flex-grow: 1;
 }

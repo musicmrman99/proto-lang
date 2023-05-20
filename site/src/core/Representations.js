@@ -96,11 +96,7 @@ export class Sentence extends Repr {
     }
 
     length = () => this.parts.reduce((accum, part) => accum + part.length(), 0);
-    toString = () => [
-        "{ SENTENCE (ref: ",
-        this.ref.toString(),
-        ") }"
-    ].join("");
+    toString = () => "{ SENTENCE (ref: "+this.ref.toString()+") }";
 }
 export const isSentence = (node) => node != null && node.constructor === Sentence;
 
@@ -112,7 +108,7 @@ export class Declaration extends Repr {
     }
 
     length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
-    toString = () => "{ DECLARE: "+this.template.map(item => item.toString()).join("")+" }";
+    toString = () => "{ DECLARATION: "+this.template.map(item => item.toString()).join("")+" }";
 }
 export const isDeclaration = (node) => node != null && node.constructor === Declaration;
 
@@ -128,7 +124,7 @@ export class Number extends Repr {
     toString = () => this.value.toString();
 }
 
-export class String extends Repr {
+export class Text extends Repr {
     constructor(value) {
         super();
         this.value = value;
@@ -194,7 +190,7 @@ export const isBlock = (node) => node != null && node.constructor === Block;
 export const isLiteral = (node) => node != null && (
     [
         Number,
-        String,
+        Text,
         Logical,
         Map,
         Block
@@ -226,7 +222,7 @@ export const repr = Object.freeze({
     Declaration,
     Parameter,
     Number,
-    String,
+    Text,
     Logical,
     Map,
     Block

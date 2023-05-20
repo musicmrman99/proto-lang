@@ -5,6 +5,23 @@
     align-items: center;
 }
 
+.button.inline {
+    display: inline-flex;
+}
+.button.compact {
+    padding: 0;
+}
+
+.button.disabled, .button:disabled {
+    color: var(--background-bright);
+}
+.button.active, .button:active {
+    background-color: var(--background-very-light);
+}
+.button.hover, .button:hover {
+    background-color: var(--background-dark);
+}
+
 .button.icon-location-vertical {
     flex-direction: column;
 }
@@ -12,10 +29,6 @@
 .button > .icon {
     padding: 5px;
 }
-
-.button.active, .button:active {
-    background-color: var(--background-very-light);
-}
-.button.hover, .button:hover {
-    background-color: var(--background-dark);
+.button.compact > .icon {
+    padding: 2px;
 }

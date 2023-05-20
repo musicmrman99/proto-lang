@@ -31,16 +31,15 @@ fragment WORD_CHAR : (
 // This set of characters must be mutually exclusive with WORD_CHAR, or the lexer will exhibit undesirable behaviour.
 // Included in parser: decimal point
 // Includes: associations, 'true'/'false'
-// Excludes: comments, numbers, strings, maps, blocks, parameters, sentence def chars (`:` and `|`)
+// Excludes: comments, numbers, text, maps, blocks, parameters, sentence def chars (`:` and `|`)
 fragment UNCOMPOSED_RESERVED_CHAR : [\-<>ft] ;
 
 // Comment-only characters
 fragment COMMENT_PERMITTED_CHAR : [\u2500-\u257F] ; // \u2500-\u257F are the box-drawing characters
 
-// Strings - special case
-fragment STRING_QUOTE : ["] ;
-fragment STRING_CHAR : ~["] ;
-fragment STRING_ESCAPE : '\\' . ;
+// Text - special case
+fragment TEXT_QUOTE : ["] ;
+fragment TEXT_CHAR : ~["] ;
 
 /* Tokens
 -------------------------------------------------- */
@@ -65,8 +64,8 @@ NEWLINE : NEWLINE_CHAR ;
 INT_LITERAL : DIGIT+ ;
 DECIMAL_POINT : '.' ;
 
-// Strings
-STRING_LITERAL : STRING_QUOTE (STRING_ESCAPE | STRING_CHAR)* STRING_QUOTE ;
+// Text
+TEXT_LITERAL : TEXT_QUOTE TEXT_CHAR* TEXT_QUOTE ;
 
 // Logicals
 LOGICAL_LITERAL : 'true' | 'false' ;

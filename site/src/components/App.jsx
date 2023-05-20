@@ -7,6 +7,7 @@ import Toolbar from './Toolbar';
 import LanguageSpace from './LanguageSpace';
 import ExecutionSpace from './ExecutionSpace';
 import { TabsContext } from './utils/Tabs';
+import { Trees, TraversalConflictPriority, Selectors } from '../utils/trees';
 
 export default class App extends react.Component {
   constructor(props) {
@@ -17,7 +18,8 @@ export default class App extends react.Component {
       protoSource: "",
 
       // Build Config
-      buildConfig: configDefault, // null = invalid config
+      buildConfig: configDefault,
+      buildConfigOverride: {}, // null = invalid config
 
       // Build Output
       buildLog: {
@@ -72,12 +74,26 @@ export default class App extends react.Component {
 
             <ExecutionSpace
               buildConfig={this.state.buildConfig}
+              buildConfigOverride={this.state.buildConfigOverride}
               ast={this.state.ast}
               buildLog={this.state.buildLog}
               programInput={this.state.programInput}
               programOutput={this.state.programOutput}
 
-              onBuildConfigChange={(buildConfig) => this.setState({buildConfig: buildConfig})}
+              onBuildConfigOverrideChange={(buildConfigOverride) => this.setState({
+                buildConfigOverride: buildConfigOverride,
+                buildConfig: buildConfigOverride == null ? null : Trees.translate(
+                  [buildConfigOverride, configDefault],
+                  null, // no filter
+                  Selectors.first,
+                  {},
+                  {
+                    // Always use the tree with the longest path for each item
+                    // (ie. ignore omitted items in earlier trees)
+                    conflictPriority: TraversalConflictPriority.NON_LEAF
+                  }
+                )
+              })}
               onProgramInputChange={(programInput) => this.setState({programInput: programInput})}
             />
           </main>

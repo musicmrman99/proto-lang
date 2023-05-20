@@ -14,7 +14,11 @@ export default class ExecutionSpace extends react.Component {
     return (
       <div id="execution-space">
         <TabContent tabid="build-config">
-          <BuildConfigPanel buildConfig={this.props.buildConfig} onBuildConfigChange={this.props.onBuildConfigChange} />
+          <BuildConfigPanel
+            buildConfig={this.props.buildConfig}
+            buildConfigOverride={this.props.buildConfigOverride}
+            onBuildConfigOverrideChange={this.props.onBuildConfigOverrideChange}
+          />
         </TabContent>
 
         <TabContent tabid="build-log">
