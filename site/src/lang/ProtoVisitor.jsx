@@ -228,7 +228,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // relevant Repr.
         const isImpossible = (value) => value === false;
         const isPossible = (value) => value === true;
-        const isActual = (value) => is.declaration(value);
+        const isActual = (value) => !isImpossible(value) && !isPossible(value);
 
         // A buffer for collected nodes until a valid syntactic construct is found
         // (eg. a complete sentence, declaration operator, separator operator, association operator, etc.),
@@ -272,7 +272,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
                 // Senteces in declarations must be evaluated at the site of declaration,
                 // not the site of usage, for closures to work properly.
-                finalChildren.decls.push(decl);
+                finalChildren.push(decl);
 
                 // We're now out of the 'value of a declaration' context, so further declarations are allowed.
                 declTemplate = true;

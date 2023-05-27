@@ -113,7 +113,7 @@ export class Sentence extends Repr {
     }
 
     length = () => this.parts.reduce((accum, part) => accum + part.length(), 0);
-    toString = () => "{ SENTENCE (ref: "+this.ref.toString()+") }";
+    toString = () => "{ SENTENCE (decl: "+this.decl.toString()+") }";
 }
 export const isSentence = (node) => node != null && node.constructor === Sentence;
 

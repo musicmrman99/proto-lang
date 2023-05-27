@@ -35,7 +35,7 @@ const evaluate = (astNode, context) => {
 
   // If a sentence, evaluate it
   if (is.sentence(astNode)) {
-    let value = evaluate(astNode.ref, context);
+    let value = evaluate(astNode.decl.sentence, context);
 
     // If its ref is a block, run it
     if (is.block(value)) {
