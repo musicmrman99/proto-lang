@@ -99,7 +99,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // This is one way of implementing lexical clojures, as refs are bound to the
         // block's child Sentences at the site of creation, and may come from outer
         // scopes.
-        this.parseSentences(root);
+        this.parseSentences(root, root);
         return root;
     };
     visitBlock_literal = (ctx) => this.parseBlock(ctx);
@@ -170,11 +170,13 @@ export default class ProtoVisitor extends ProtoParserVisitor {
      * Parses all sentences and any additional features relevant to the node
      * type from the children.
      * 
+     * @param {repr.Block} context The current declaration context. It will have its
+     *   decls and reqEncDecls lists populated.
      * @param {repr.Map|repr.Block} nestableNode The representation of the nestable
      *   node in which to parse sentences. Its children will be replaced by the
      *   parsed sentences.
      */
-    parseSentences = (nestableNode) => {
+    parseSentences = (context, nestableNode) => {
         /*
         Details of the algorithm:
 
@@ -290,12 +292,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Doing it here - after the Declaration has been added to this namespace,
             // and not during sentence parsing - makes this language support recursive
             // blocks without faffing with mutable maps.
-            // 
-            // The alternative, eg. define a sentence template as an empty mutable map,
-            // then add a block to it that references the sentence template - the sentence
-            // template will exist by the time the block is defined, and the map will
-            // contain the block by the time the block is run.
-            this.parseNestedNodes(sentence);
+            //
+            // Also, find all the Declarations that this block will need to enclose over.
+            this.parseNestedNodes(context, sentence);
 
             // Drop explicit terminators, but keep implicit terminators, as they may still
             // need parsing in the context of the parent (ie. nestable node).
@@ -423,18 +422,22 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     }
 
     /**
-     * Parse the sentences of the given nestable node, or all nestable nodes
-     * found within the given node.
+     * Parse the sentences of the given nestable node (if a nestable node), or
+     * all nestable nodes found within the given node (if not a nestable node).
      * 
      * Recurses into any non-nestable non-terminal nodes to find nestable nodes.
      * Assumes that all applicable declarations in parents (and the 'current'
      * declaration, if applicable) have been created for the nestable node's
      * sentences to match against.
      * 
-     * @param {Repr} node The node to recursively search for nestable nodes (maps
+     * Also, find all the Declarations that this block will need to enclose over.
+     * 
+     * @param {repr.Block} context The current declaration context. It will have its
+     *   decls and reqEncDecls lists populated.
+     * @param {repr.Repr} node The node to recursively search for nestable nodes (maps
      *   and blocks).
      */
-    parseNestedNodes = (node) => {
+    parseNestedNodes = (context, node) => {
         // Note: this is above parseSentence(), regardless of the order of usage,
         //       because it's related to high-level processing of nodes.
 
@@ -444,17 +447,35 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // A parameter has-a Map, not is-a Map, so special-case it
             if (is.parameter(node)) nestableNode = node.extraction;
 
-            this.parseSentences(nestableNode);
-        }
+            // If this nestable node creates a new namespace/scope, set it as the
+            // new context, otherwise keep the current context.
+            const nestedContext = is.block(nestableNode) ? nestableNode : context;
 
-        // Recursive case
-        if (is.sentence(node)) {
-            for (const param of node.params) {
-                this.parseNestedNodes(param);
+            // Recurse into the nested sentences
+            this.parseSentences(nestedContext, nestableNode);
+
+            // If this nestable node creates a new namespace/scope, then fetch its
+            // discovered required enclosing declarations and cascade them upwards
+            // to the current context.
+            if (is.block(nestableNode)) {
+                context.reqEncDecls.push(...nestedContext.reqEncDecls);
             }
         }
 
-        // Nothing to parse (eg. a non-nestable literal).
+        if (is.sentence(node)) {
+            // Check if the sentence's declaration requires enclosure, and add it if so
+            if (!context.decls.includes(node.decl) && !context.reqEncDecls.includes(node.decl)) {
+                context.reqEncDecls.push(node.decl);
+            }
+
+            // Recursive case
+            for (const param of node.params) {
+                this.parseNestedNodes(context, param);
+            }
+
+            // Base case
+            // Nothing to parse (eg. a non-nestable literal).
+        }
     }
 
     /**

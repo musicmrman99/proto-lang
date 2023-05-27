@@ -182,7 +182,8 @@ export class Block extends Repr {
         super();
         this.parent = null;
         this.children = children;
-        this.decls = [];
+        this.reqEncDecls = []; // Decls it requires from the enclosing context
+        this.decls = [];       // Decls it declares
     }
 
     length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
