@@ -32,27 +32,44 @@ export class SentenceFragment extends Repr {
 }
 export const isSentenceFragment = (node) => node != null && node.constructor === SentenceFragment;
 
-export class SoftTerminator extends Repr {
+export class ExplicitSoftTerminator extends Repr {
     length = () => 0;
     toString = () => "¶";
 }
-export const isSoftTerminator = (node) => node != null && node.constructor === SoftTerminator;
+export const isExplicitSoftTerminator = (node) => node != null && node.constructor === ExplicitSoftTerminator;
+
+export class ExplicitHardTerminator extends Repr {
+    length = () => 0;
+    toString = () => "█";
+}
+export const isExplicitHardTerminator = (node) => node != null && node.constructor === ExplicitHardTerminator;
 
 export class AssociationOperator extends Repr {
-    constructor(relation, remove) {
+    constructor(relation) {
         super();
         this.relation = relation;
-        this.remove = remove;
     }
 
-    length = () => 3;
+    length = () => 2;
     toString = () => (
-        (this.relation.leftDir ? "<" : "-") +
-        (this.remove ? "/" : "-") +
+        (this.relation.left ? "<" : "-") +
         (this.relation.right ? ">" : "-")
     )
+
+    isDirectedLeft = () => this.relation.left
+    isDirectedRight = () => this.relation.right
+    isDirected = () => this.isDirectedLeft() || this.isDirectedRight()
+    isBidirectional = () => this.isDirectedLeft() && this.isDirectedRight()
+    isUnidirectional = () => this.isDirected() && !this.isBidirectional()
+    isUndirected = () => !this.isDirected()
 }
 export const isAssociationOp = (node) => node != null && node.constructor === AssociationOperator;
+
+export class SeparatorOperator extends Repr {
+    length = () => 1;
+    toString = () => ","
+}
+export const isSeparatorOp = (node) => node != null && node.constructor === SeparatorOperator;
 
 export class DeclarationOperator extends Repr {
     length = () => 1;
@@ -123,6 +140,7 @@ export class Number extends Repr {
     length = () => this.value.toString().length;
     toString = () => this.value.toString();
 }
+export const isNumber = (node) => node != null && node.constructor === Number;
 
 export class Text extends Repr {
     constructor(value) {
@@ -133,6 +151,7 @@ export class Text extends Repr {
     length = () => this.value.length + 2; // for the quotes
     toString = () => '"'+this.value.toString()+'"';
 }
+export const isText = (node) => node != null && node.constructor === Text;
 
 export class Logical extends Repr {
     constructor(value) {
@@ -143,28 +162,18 @@ export class Logical extends Repr {
     length = () => this.value.toString().length;
     toString = () => this.value.toString();
 }
-
-export class Parameter extends Repr {
-    constructor(index, extraction) {
-        super();
-        this.index = index;
-        this.extraction = extraction;
-    }
-
-    length = () => 1 + this.index.toString().length + this.extraction.length();
-    toString = () => "@" + this.index.toString() + this.extraction.toString();
-}
-export const isParameter = (node) => node != null && node.constructor === Parameter;
+export const isLogical = (node) => node != null && node.constructor === Logical;
 
 export class Map extends Repr {
-    constructor(children) {
+    constructor(children, associations) {
         super();
         this.parent = null;
         this.children = children;
+        this.associations = associations;
     }
 
     length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
-    toString = () => "["+this.children.map(child => child.toString()).join("")+"]";
+    toString = () => "["+this.children.map(child => child.toString()).join(", ")+"]";
 }
 export const isMap = (node) => node != null && node.constructor === Map;
 
@@ -197,13 +206,96 @@ export const isLiteral = (node) => node != null && (
     ].includes(node.constructor)
 );
 
+export class Parameter extends Repr {
+    constructor(index, extraction) {
+        super();
+        this.index = index;
+        this.extraction = extraction;
+    }
+
+    length = () => 1 + this.index.toString().length + this.extraction.length();
+    toString = () => "@" + this.index.toString() + this.extraction.toString();
+}
+export const isParameter = (node) => node != null && node.constructor === Parameter;
+
 /* Composite Utils
 -------------------------------------------------- */
 
+/**
+ * Checks for nodes that represent value literals.
+ * 
+ * @param {Repr} node The node to check.
+ * @returns Whether the given node is a value node.
+ */
 export const isValue = (node) => isLiteral(node) || isParameter(node);
+
+/**
+ * Checks for nodes that create a new top-level parsing context,
+ * and so can contain other nodes.
+ * 
+ * @param {Repr} node The node to check.
+ * @returns Whether the given node can have other nodes nested in it.
+ */
 export const isNestable = (node) => isMap(node) || isBlock(node) || isParameter(node);
-export const isTerminator = (node) => isSoftTerminator(node) || isAssociationOp(node);
-export const hasDeclarations = (node) => isBlock(node);
+
+/**
+ * Checks for nodes that can contain declarations.
+ * 
+ * Note: All nodes that can contain declarations are nestable.
+ *       See `isNestable()`.
+ * 
+ * @param {Repr} node The node to check.
+ * @returns Whether the given node can contain `Declaration` nodes.
+ */
+export const hasDeclarations = (node) => isNestable(node) && isBlock(node);
+
+/**
+ * Checks for nodes that are explicit terminators (ie. nodes whose
+ * only function is to terminate sentences).
+ * 
+ * @param {Repr} node The node to check.
+ * @returns Whether the given node is an explicit terminator.
+ */
+export const isExplicitTerminator = (node) => isExplicitSoftTerminator(node) || isExplicitHardTerminator(node);
+
+/**
+ * Checks for nodes that are implicit terminators (ie. nodes whose
+ * function is primarily something other than terminating sentences,
+ * but either may or must terminate sentences).
+ * 
+ * @param {Repr} node The node to check.
+ * @returns Whether the given node is an implicit terminator.
+ */
+export const isImplicitTerminator = (node) => isAssociationOp(node) || isSeparatorOp(node);
+
+/**
+ * Checks for nodes that can optionally terminate a sentence
+ * (including the value of a declaration).
+ * 
+ * @param {Repr} node The node to check.
+ * @returns Whether the given node is a node that must terminate
+ *   a sentence.
+ */
+export const isSoftTerminator = (node) => isExplicitSoftTerminator(node);
+
+/**
+ * Checks for nodes that must terminate a sentence (including the
+ * value of a declaration).
+ * 
+ * @param {Repr} node The node to check.
+ * @returns Whether the given node is a node that must terminate
+ *   a sentence.
+ */
+export const isHardTerminator = (node) => isExplicitHardTerminator(node) || isAssociationOp(node) || isSeparatorOp(node);
+
+/**
+ * Checks for nodes that can terminate a sentence (including the
+ * value of a declaration).
+ * 
+ * @param {Repr} node The node to check.
+ * @returns Whether the given node is a sentence-terminating node.
+ */
+export const isTerminator = (node) => isSoftTerminator(node) || isHardTerminator(node);
 
 /* Exports
 -------------------------------------------------- */
@@ -212,7 +304,9 @@ export const repr = Object.freeze({
     Repr,
 
     SentenceFragment,
-    SoftTerminator,
+    ExplicitSoftTerminator: ExplicitSoftTerminator,
+    ExplicitHardTerminator: ExplicitHardTerminator,
+    SeparatorOperator,
     AssociationOperator,
     DeclarationOperator,
     PlaceholderOperator,
@@ -230,11 +324,12 @@ export const repr = Object.freeze({
 
 export const is = {
     sentenceFragment: isSentenceFragment,
-    softTerminator: isSoftTerminator,
-    associationOperator: isAssociationOp,
+    explicitSoftTerminator: isExplicitSoftTerminator,
+    explicitHardTerminator: isExplicitHardTerminator,
+    separatorOp: isSeparatorOp,
+    associationOp: isAssociationOp,
     declarationOp: isDeclarationOp,
     placeholderOp: isPlaceholderOp,
-    associationOp: isAssociationOp,
     argument: isArgument,
 
     sentence: isSentence,
@@ -246,8 +341,12 @@ export const is = {
 
     value: isValue,
     nestable: isNestable,
+    hasDeclarations: hasDeclarations, // Put it here anyway
     terminator: isTerminator,
-    hasDeclarations: hasDeclarations // Put it here anyway
+    explicitTerminator: isExplicitTerminator,
+    implicitTerminator: isImplicitTerminator,
+    softTerminator: isSoftTerminator,
+    hardTerminator: isHardTerminator
 }
 
 export const format = {

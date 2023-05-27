@@ -73,8 +73,8 @@ LOGICAL_LITERAL : 'true' | 'false' ;
 // Maps
 OPEN_MAP : '[' ;
 CLOSE_MAP : ']' ;
-ASSOCIATION : [<-][->] ;
-ELEM_DELIM : ',' ;
+MAP_SEPARATOR : ',' ;
+MAP_ASSOCIATION : [<-][->] ;
 
 // Blocks
 CLOSE_BLOCK : '}' ;
