@@ -389,39 +389,6 @@ export default class ProtoVisitor extends ProtoParserVisitor {
     }
 
     /**
-     * Parse the item separators and associations, removing their parse-phase
-     * AST representations (repr.AssociationOperator and repr.SeparatorOperator).
-     * 
-     * @param {repr.Map} map The map to parse associations for.
-     */
-    parseAssociations = (map) => {
-        const associations = [];
-        const newChildren = [];
-
-        let prevChild = null;
-        let prevAssoc = null;
-        for (const child of map.children) {
-            if (is.separatorOp(child)) {
-                prevChild = null;
-
-            } else if (is.associationOp(child)) {
-                prevAssoc = child;
-
-            } else { // A sentence/literal/parameter/etc.
-                if (prevAssoc != null) {
-                    associations.push([prevChild, prevAssoc, child]);
-                    prevAssoc = null;
-                }
-                newChildren.push(child);
-                prevChild = child;
-            }
-        }
-
-        map.associations = associations;
-        map.children = newChildren;
-    }
-
-    /**
      * Parse the sentences of the given nestable node (if a nestable node), or
      * all nestable nodes found within the given node (if not a nestable node).
      * 
@@ -438,8 +405,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
      *   and blocks).
      */
     parseNestedNodes = (context, node) => {
-        // Note: this is above parseSentence(), regardless of the order of usage,
-        //       because it's related to high-level processing of nodes.
+        // Note: this is above parseSentence() in this file, regardless of the order
+        //       of usage, because it's related to high-level processing of nodes.
 
         // Base case
         if (is.nestable(node)) {
@@ -476,6 +443,42 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Base case
             // Nothing to parse (eg. a non-nestable literal).
         }
+    }
+
+    /**
+     * Parse the item separators and associations, removing their parse-phase
+     * AST representations (repr.AssociationOperator and repr.SeparatorOperator).
+     * 
+     * @param {repr.Map} map The map to parse associations for.
+     */
+    parseAssociations = (map) => {
+        // Note: this is above parseSentence() in this file, regardless of the order
+        //       of usage, because it's related to high-level processing of nodes.
+
+        const associations = [];
+        const newChildren = [];
+
+        let prevChild = null;
+        let prevAssoc = null;
+        for (const child of map.children) {
+            if (is.separatorOp(child)) {
+                prevChild = null;
+
+            } else if (is.associationOp(child)) {
+                prevAssoc = child;
+
+            } else { // A sentence/literal/parameter/etc.
+                if (prevAssoc != null) {
+                    associations.push([prevChild, prevAssoc, child]);
+                    prevAssoc = null;
+                }
+                newChildren.push(child);
+                prevChild = child;
+            }
+        }
+
+        map.associations = associations;
+        map.children = newChildren;
     }
 
     /**
