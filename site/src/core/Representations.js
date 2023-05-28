@@ -1,3 +1,7 @@
+import { v4 as uuidv4 } from 'uuid';
+import BuildError from '../utils/BuildError';
+import RuntimeError from '../utils/RuntimeError';
+
 /* Util
 -------------------------------------------------- */
 
@@ -16,7 +20,70 @@ export const nodeListToString = (nodes) => "NODE_LIST" + nodesStrList(nodes);
 /* Representations
 -------------------------------------------------- */
 
-export class Repr {}
+export class Repr {
+    static Index = class {
+        constructor(type) {
+            this.index = {};
+            this.type = type;
+        }
+
+        get = (id) => this.index[id];
+
+        set = (repr) => {
+            if (this.type != null && !this.type(repr)) {
+                throw new BuildError("Type error: Repr '"+repr.toString()+"' cannot be stored in this index");
+            }
+            this.index[repr.id] = repr;
+        }
+        unset = (repr) => delete this.index[repr.id];
+
+        has = (repr) => this.index[repr.id] != null;
+
+        keys = () => Object.keys(this.index);
+        values = () => Object.values(this.index);
+    }
+
+    static Mapping = class {
+        constructor(keyType, valueType) {
+            this.mapping = {};
+            this.keyType = keyType;
+            this.valueType = valueType;
+        }
+
+        get = (keyRepr) => Repr.get(this.mapping[keyRepr.id]);
+
+        set = (keyRepr, valueRepr) => {
+            if (this.keyType != null && !this.keyType(keyRepr)) {
+                throw new BuildError("Type error: Repr '"+keyRepr.toString()+"' cannot be stored as a key in this mapping");
+            }
+            if (this.valueType != null && !this.valueType(valueRepr)) {
+                throw new BuildError("Type error: Repr '"+valueRepr.toString()+"' cannot be stored as a value in this mapping");
+            }
+            this.mapping[keyRepr.id] = valueRepr.id;
+        }
+        setAll = (entries) => entries.forEach(([keyRepr, valueRepr]) => this.set(keyRepr, valueRepr));
+        mergeIn = (mapping) => Object.assign(this.mapping, mapping.mapping);
+
+        unset = (keyRepr) => delete this.index[keyRepr.id];
+        unsetAll = (keyReprs) => keyReprs.forEach((keyRepr) => this.unset(keyRepr));
+
+        hasKey = (keyRepr) => this.index[keyRepr.id] != null;
+        hasValue = (valueRepr) => this.values().includes(valueRepr.id);
+
+        keys = () => Object.keys(this.mapping).map(Repr.get);
+        values = () => Object.values(this.mapping).map(Repr.get);
+        entries = () => Object.entries(this.mapping).map(([key, value]) => [Repr.get(key), Repr.get(value)]);
+    }
+
+    static all = new Repr.Index();
+    static get = (id) => Repr.all.get(id);
+
+    constructor() {
+        this.id = uuidv4();
+        Repr.all.set(this);
+    }
+}
+export const isRepr = (node) => node != null && Repr.get(node.id) != null;
 
 /* Intermediate Representations
 -------------------- */
@@ -165,11 +232,11 @@ export class Logical extends Repr {
 export const isLogical = (node) => node != null && node.constructor === Logical;
 
 export class Map extends Repr {
-    constructor(children, associations) {
+    constructor() {
         super();
         this.parent = null;
-        this.children = children;
-        this.associations = associations;
+        this.children = [];
+        this.associations = [];
     }
 
     length = () => this.children.reduce((accum, child) => accum + child.length(), 0);
@@ -178,10 +245,10 @@ export class Map extends Repr {
 export const isMap = (node) => node != null && node.constructor === Map;
 
 export class Block extends Repr {
-    constructor(children) {
+    constructor() {
         super();
         this.parent = null;
-        this.children = children;
+        this.children = [];
         this.reqEncDecls = []; // Decls it requires from the enclosing context
         this.decls = [];       // Decls it declares
     }
@@ -218,6 +285,229 @@ export class Parameter extends Repr {
     toString = () => "@" + this.index.toString() + this.extraction.toString();
 }
 export const isParameter = (node) => node != null && node.constructor === Parameter;
+
+/* Runtime Representations
+-------------------- */
+
+/**
+ * The 'map interface' is the conceptual base type of all Proto runtime entities.
+ * 
+ * The map interface is defined in detail in the Proto spec.
+ */
+export class MapInterface extends Repr {
+    //
+}
+
+export class RuntimeNumber extends MapInterface {
+    constructor(astNumber) {
+        super();
+        this.value = astNumber.value;
+    }
+
+    // Fake an AST node
+    static fromRaw = (number) => new RuntimeNumber({value: +number});
+
+    /* Map interface methods
+    -------------------- */
+
+    //
+
+    /* Utility methods
+    -------------------- */
+
+    toString = () => {
+        return this.value.toString();
+    };
+}
+export const isRuntimeNumber = (node) => node != null && node.constructor === RuntimeNumber;
+
+export class RuntimeText extends MapInterface {
+    constructor(astText) {
+        super();
+        this.value = astText.value;
+    }
+
+    // Fake an AST node
+    static fromRaw = (string) => new RuntimeText({value: string.toString()});
+
+    /* Map interface methods
+    -------------------- */
+
+    //
+
+    /* Utility methods
+    -------------------- */
+
+    toString = () => {
+        return `"${this.value}"`;
+    };
+}
+export const isRuntimeText = (node) => node != null && node.constructor === RuntimeText;
+
+export class RuntimeLogical extends MapInterface {
+    constructor(astLogical) {
+        super();
+        this.value = astLogical.value;
+    }
+
+    // Fake an AST node
+    static fromRaw = (boolean) => new RuntimeNumber({value: !!boolean});
+
+    /* Map interface methods
+    -------------------- */
+
+    //
+
+    /* Utility methods
+    -------------------- */
+
+    toString = () => {
+        return this.value.toString();
+    };
+}
+export const isRuntimeLogical = (node) => node != null && node.constructor === RuntimeLogical;
+
+export class RuntimeMap extends MapInterface {
+    constructor(astMap, children) {
+        super();
+
+        this.astMap = astMap;
+        this.items = children;
+    }
+
+    /* Map interface methods
+    -------------------- */
+
+    //
+
+    /* Utility methods
+    -------------------- */
+
+    toString = () => {
+        return `{ MAP [ ${this.items.map((item) => item.toString()).join(", ")} ] }`;
+    };
+}
+export const isRuntimeMap = (node) => node != null && node.constructor === RuntimeMap;
+
+export class RuntimeBlock extends MapInterface {
+    constructor(astBlock, context) {
+        super();
+
+        // Known when the block is created
+        this.astBlock = astBlock;
+        this.encDecls = new Repr.Mapping(isDeclaration, isRepr);
+        if (context != null) { // If not the root of the stack
+            astBlock.reqEncDecls.forEach((reqEncDecl) => {
+                const value = context.getStackDeclValue(reqEncDecl);
+                if (value == null) {
+                    // Should never happen, as it should throw a build-time error,
+                    // but it may happen in the future if reflection is ever introduced.
+                    throw new RuntimeError(
+                        `Required enclosing declaration '${reqEncDecl.toString()}' not found in:`+
+                        this.getStackTraceStr()
+                    );
+                }
+                this.encDecls.set(reqEncDecl, value);
+            });
+        }
+
+        // Not known until the block is run (possibly more than once)
+        this.parent = null;
+        this.args = null;
+        this.decls = null;
+    }
+
+    /* Block methods
+    -------------------- */
+
+    /**
+     * Set the runtime block up for execution.
+     * 
+     * @param {Array<Repr>} args An array of runtime representations to be used as arguments
+     *   for this execution of this block.
+     */
+    setupRun = (parent, args) => {
+        this.parent = parent;
+        this.args = args;
+        this.decls = (new Repr.Mapping(isDeclaration, isRepr));
+        this.decls.mergeIn(this.encDecls);
+    }
+
+    /**
+     * Teardown the execution setup of the block (see setupBlockRun()) after the execution of
+     * the block has completed (successfully or otherwise).
+     */
+    teardownRun = () => {
+        this.parent = null;
+        this.args = null;
+        this.decls = null;
+    }
+
+    /**
+     * Return the value of the given declaration in all blocks above this block on
+     * the stack.
+     * 
+     * This function is only useful while the block is running (ie. on the stack).
+     * 
+     * It is most commonly used to get the value of a required enclosing declaration
+     * in the context of the creating block (on the stack) when creating a new runtime
+     * block (which won't yet be on the stack).
+     * 
+     * @param {Declaration} decl The declaration to get the value in this block for.
+     * @returns The value of the given declaration in this block.
+     */
+    getStackDeclValue = (decl) => {
+        // Base case - search this block's decls, return if found
+        const value = this.decls.get(decl);
+        if (value != null) return value;
+
+        // Base-case - root block or not running, so nothing left to search
+        if (this.parent == null) return null;
+
+        // Recursive case - check parent
+        return this.parent.getStackDeclValue(decl);
+    }
+
+    /**
+     * Return the stack trace of this block as an array of runtime blocks.
+     * 
+     * This will only contain this block if it's not on the stack.
+     * 
+     * @returns The stack trace of this block.
+     */
+    getStackTrace = () => {
+        return [
+            this,
+            ...(this.parent != null ? this.parent.getStackTrace() : [])
+        ];
+    }
+
+    /**
+     * Return the stack trace of this block as a string.
+     * 
+     * This will only contain this block if it's not on the stack.
+     * 
+     * @returns The stack trace of this block as a string.
+     */
+    getStackTraceStr = () => {
+        return this.getStackTrace()
+            .map((runtimeBlock) => "-> "+runtimeBlock.astBlock.toString())
+            .join("\n");
+    }
+
+    /* Map interface methods
+    -------------------- */
+
+    //
+
+    /* Utility methods
+    -------------------- */
+
+    toString = () => {
+        return `{ BLOCK { decls: ${this.decls} } from ${this.astBlock.toString()} }`;
+    };
+}
+export const isRuntimeBlock = (node) => node != null && node.constructor === RuntimeBlock;
 
 /* Composite Utils
 -------------------------------------------------- */
@@ -304,6 +594,7 @@ export const isTerminator = (node) => isSoftTerminator(node) || isHardTerminator
 export const repr = Object.freeze({
     Repr,
 
+    // Intermediate Build-Time AST Node Types
     SentenceFragment,
     ExplicitSoftTerminator: ExplicitSoftTerminator,
     ExplicitHardTerminator: ExplicitHardTerminator,
@@ -313,6 +604,7 @@ export const repr = Object.freeze({
     PlaceholderOperator,
     Argument,
 
+    // Final Build-Time AST Node Types
     Sentence,
     Declaration,
     Parameter,
@@ -320,10 +612,19 @@ export const repr = Object.freeze({
     Text,
     Logical,
     Map,
-    Block
+    Block,
+
+    // Run-Time AST Node Types
+    MapInterface,
+    RuntimeNumber,
+    RuntimeText,
+    RuntimeLogical,
+    RuntimeMap,
+    RuntimeBlock
 });
 
 export const is = {
+    // Intermediate Build-Time AST Node Types
     sentenceFragment: isSentenceFragment,
     explicitSoftTerminator: isExplicitSoftTerminator,
     explicitHardTerminator: isExplicitHardTerminator,
@@ -333,21 +634,33 @@ export const is = {
     placeholderOp: isPlaceholderOp,
     argument: isArgument,
 
+    // Final Build-Time AST Node Types
     sentence: isSentence,
     declaration: isDeclaration,
     parameter: isParameter,
+    number: isNumber,
+    text: isText,
+    logical: isLogical,
     map: isMap,
     block: isBlock,
-    literal: isLiteral,
 
+    // Abstract Build-Time AST Node Types
     value: isValue,
+    literal: isLiteral,
     nestable: isNestable,
     hasDeclarations: hasDeclarations, // Put it here anyway
     terminator: isTerminator,
     explicitTerminator: isExplicitTerminator,
     implicitTerminator: isImplicitTerminator,
     softTerminator: isSoftTerminator,
-    hardTerminator: isHardTerminator
+    hardTerminator: isHardTerminator,
+
+    // Run-Time AST Node Types
+    runtimeNumber: isRuntimeNumber,
+    runtimeText: isRuntimeText,
+    runtimeLogical: isRuntimeLogical,
+    runtimeMap: isRuntimeMap,
+    runtimeBlock: isRuntimeBlock
 }
 
 export const format = {

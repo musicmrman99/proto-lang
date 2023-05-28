@@ -80,7 +80,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         }[ctx.MAP_ASSOCIATION().getText()]
     );
 
-    /* Sentence Parsing Contexts
+    /* Sentence Parsing
     -------------------- */
 
     // Translate newline -> explicit soft terminator
@@ -205,8 +205,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                               a sentence argument.
         - soft terminator   - May terminate the sentence. If it doesn't, keep parsing.
         - hard terminator   - Must terminate the sentence and produce a Sentence as a
-                              new child of the current context. If it doesn't terminate
-                              the sentence, then error.
+                              new child of the current nestable node. If it doesn't
+                              terminate the sentence, then error.
 
         Additional Features:
         - terminator (decl) - Terminates the sentence template and produces a Declaration.
@@ -234,19 +234,19 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         // A buffer for collected nodes until a valid syntactic construct is found
         // (eg. a complete sentence, declaration operator, separator operator, association operator, etc.),
-        // or until this sentence-parsing context's content is judged to be malformed.
+        // or until this nestable node's content is judged to be malformed.
         let candidateNodes = [];
 
         // The collation of all valid sentences.
         const finalChildren = [];
 
         /**
-         * Utility (must be done for each soft/hard terminator, including the explicit one
-         * at the end of the context).
-         * 
          * Check if nodes up to this point form a complete sentence based on all
          * outer declarations and all declarations in this scope so far, and if
          * so, flush the sentence to final children.
+         * 
+         * Must be done for each soft/hard terminator, including the explicit one
+         * at the end of the nestable node.
          */
         const terminateSentence = (terminator) => {
             // Try to parse sentence
@@ -264,7 +264,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 return;
             }
 
-            // Add the Sentence/Declaration to the nestable context node
+            // Add the Sentence/Declaration to the nestable node
             if (isActual(declTemplate)) {
                 const decl = new repr.Declaration(declTemplate, sentence);
 
@@ -296,8 +296,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Also, find all the Declarations that this block will need to enclose over.
             this.parseNestedNodes(context, sentence);
 
-            // Drop explicit terminators, but keep implicit terminators, as they may still
-            // need parsing in the context of the parent (ie. nestable node).
+            // Drop explicit terminators but keep implicit ones, as they may still
+            // need parsing in the parent nestable node.
             if (is.implicitTerminator(terminator)) finalChildren.push(terminator);
 
             // Keep parsing
@@ -376,16 +376,12 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             }
         }
 
-        // The end of the sentence parsing context is an explicit hard terminator,
+        // The end of the nestable node is an explicit hard terminator,
         // but ignore it if we only just terminated the last sentence.
         if (candidateNodes.length > 0) terminateSentence(new repr.ExplicitHardTerminator());
 
         // Assign transformed children
         nestableNode.children = finalChildren;
-
-        // If the nestable node context we're parsing is a Map, now we know
-        // its final children we can parse their associations.
-        if (is.map(nestableNode)) this.parseAssociations(nestableNode);
     }
 
     /**
@@ -421,11 +417,18 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Recurse into the nested sentences
             this.parseSentences(nestedContext, nestableNode);
 
-            // If this nestable node creates a new namespace/scope, then fetch its
-            // discovered required enclosing declarations and cascade them upwards
-            // to the current context.
+            // If the nestable node we're parsing is a Map, now we know
+            // its final children we can parse their associations.
+            if (is.map(nestableNode)) this.parseAssociations(nestableNode);
+
+            // If this nestable node creates a new namespace/scope, then cascade its
+            // required enclosing declarations upwards to the current context,
+            // excluding any declarations provided by the current context.
             if (is.block(nestableNode)) {
-                context.reqEncDecls.push(...nestedContext.reqEncDecls);
+                context.reqEncDecls.push(
+                    ...nestedContext.reqEncDecls
+                    .filter((reqEncDecl) => !context.decls.includes(reqEncDecl))
+                );
             }
         }
 
@@ -439,10 +442,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             for (const param of node.params) {
                 this.parseNestedNodes(context, param);
             }
-
-            // Base case
-            // Nothing to parse (eg. a non-nestable literal).
         }
+
+        // Base case - non-nestable literal
+        // Nothing to parse for these
     }
 
     /**
@@ -513,7 +516,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             return sentence[0];
         }
 
-        // 1) Get a list of all possible matches of a sentence template (as an array of
+        // 2) Get a list of all possible matches of a sentence template (as an array of
         //    [decl, [Repr, ...]] pairs), ignoring recursion.
         log("In-Scope Declarations:");
         allDecls.forEach(decl => log(decl.toString()));
@@ -529,10 +532,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // Remove non-matching declarations
             .filter(([_, sentenceCandidate]) => sentenceCandidate.length !== 0);
 
-        // 2) For each sentence candidate, try to get a match. First match is the best match of this sentence.
+        // 3) For each sentence candidate, try to get a match. First match is the best match of this sentence.
         log("Match Against Declarations:");
         for (const [decl, sentenceCandidate] of sortedTemplateMatches) {
-            // 2.1) Recursive Case: Try to parse each argument of the sentence (to get the
+            // 3.1) Recursive Case: Try to parse each argument of the sentence (to get the
             //      best matching sub-sentence) to form a full sentence.
             let fullSentence = new repr.Sentence(decl, []);
             for (const node of sentenceCandidate) {
@@ -554,7 +557,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 }
             }
 
-            // 2.2) If it makes a full sentence, return it (the first full sentence found wins)
+            // 3.2) If it makes a full sentence, return it (the first full sentence found wins)
             if (is.sentence(fullSentence)) {
                 log(decl + " -- MATCH");
                 return fullSentence;
@@ -563,7 +566,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             }
         }
 
-        // 3) Base Case: No matching sentence found
+        // 4) Base Case: No matching sentence found
         return null;
     }
 
