@@ -23,7 +23,8 @@
 .tab-content {
     min-height: 70px; /* minimum flex basis (otherwise very large content, even if overflowing, will
                          be given such a high proportion of the space that nothing else is visible) */
-    flex-grow: 1; /* grow in parent container */
-    overflow: auto;
-    display: flex; /* create new container to pretend this wrapper isn't here */
+    flex-basis: 0;    /* all tabs are the same size along the main axis */
+    flex-grow: 1;     /* grow in parent container */
+    overflow: auto;   /* cascade overflow */
+    display: flex;    /* create new container to pretend this wrapper isn't here */
 }
