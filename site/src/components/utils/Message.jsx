@@ -72,7 +72,7 @@ export default class Message extends react.Component {
           {this.state.expanded ? (
             // Show all children
             splitChildren.map((child) => (
-              <p>{child}</p>
+              <p key={child.toString()}>{child}</p>
             ))
           ) : (
             // Show only first child (if any children)
