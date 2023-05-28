@@ -100,7 +100,6 @@ export default class Message extends react.Component {
     if (breakAfterChars == null) breakAfterChars = "()[]{}<>-/\\|:,."; // Not [_]
     if (breakRemChars == null) breakRemChars = " \t\n";
 
-    console.log(breakRemChars);
     const breakAfterCharsArr = breakAfterChars.match(/(.|\n){1}/g);
     const breakRemCharsArr = breakRemChars.match(/(.|\n){1}/g);
 
