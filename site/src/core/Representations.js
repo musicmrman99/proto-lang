@@ -403,7 +403,7 @@ export class RuntimeBlock extends MapInterface {
                     // Should never happen, as it should throw a build-time error,
                     // but it may happen in the future if reflection is ever introduced.
                     throw new RuntimeError(
-                        `Required enclosing declaration '${reqEncDecl.toString()}' not found in:`+
+                        `Required enclosing declaration '${reqEncDecl.toString()}' not found in:\n`+
                         this.getStackTraceStr()
                     );
                 }
