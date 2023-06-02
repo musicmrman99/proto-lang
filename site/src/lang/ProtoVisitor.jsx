@@ -217,9 +217,6 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                               feature.
         */
 
-        // The collection of all declarations lexically 'above' this nestable node.
-        const outerDecls = this.getDeclarations(nestableNode.parent);
-
         // Value is:
         // - true if a declaration operator is allowed next.
         // - false if a declaration operator is not allowed next.
@@ -249,8 +246,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
          * at the end of the nestable node.
          */
         const terminateSentence = (terminator) => {
-            // Try to parse sentence
-            const sentence = this.parseSentence(candidateNodes, outerDecls.concat(nestableNode.decls != null ? nestableNode.decls : []));
+            // Try to parse sentence using the collection of all declarations
+            // lexically available in this nestable node, in order of precedence.
+            const sentence = this.parseSentence(candidateNodes, this.getDeclarations(nestableNode));
 
             // If the sentence is incomplete, then return
             if (sentence == null) {
@@ -382,6 +380,24 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         // Assign transformed children
         nestableNode.children = finalChildren;
+    }
+
+    /**
+     * Return a flattened list of all declarations in the given lexical scope
+     * (nestable node), ordered by lexical precedence to enable name hiding.
+     * A declaration is a mapping of a sentence template to a literal or sentence.
+     */
+    getDeclarations = (nestableNode) => {
+        // Base case (above the top namespace = no decls)
+        if (nestableNode == null) return [];
+
+        // Recursive case
+        const decls = [];
+        if (is.hasDeclarations(nestableNode)) {
+            decls.push(...nestableNode.decls); // If this nestable node has a namespace, add its decls (possibly hiding parent decls)
+        }
+        decls.push(...this.getDeclarations(nestableNode.parent)); // Add decls of all parent namespaces recursively.
+        return decls;
     }
 
     /**
@@ -850,8 +866,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         return matches;
     }
 
-    // Utilities for getAllTemplateMatches()
-
+    // Utility for getAllTemplateMatches()
     spliceTemplateFragment = (templateNode, sentenceNode, sentenceStartPos) => {
         // Try to parse template fragment out of sentence fragment node
         let matchPos = sentenceNode.content
@@ -867,18 +882,5 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             matchPos,
             matchPos + templateNode.content.length
         ];
-    }
-
-    // Return a flattened list of all declarations in the given lexical scope
-    // (nestable node). A declaration is a mapping of a sentence template to
-    // a bound ref object.
-    getDeclarations = (nestableNode) => {
-        // Base case (above the top namespace = no decls)
-        if (nestableNode == null) return [];
-
-        // Recursive case
-        const decls = [...this.getDeclarations(nestableNode.parent)];            // Add decls of parent namespaces.
-        if (is.hasDeclarations(nestableNode)) decls.push(...nestableNode.decls); // Then, if a namespace yourself, add your decls (possibly hiding parent decls).
-        return decls;
     }
 }
