@@ -40,14 +40,11 @@ number_literal : INT_LITERAL (DECIMAL_POINT INT_LITERAL)? ;
 text_literal : TEXT_LITERAL ;
 logical_literal : LOGICAL_LITERAL ;
 
-map_expression_atom : (
-    association_operator
-  | expression_atom
-);
 map_literal : OPEN_MAP any_whitespace?
-    (map_expression_atom+? (ELEM_DELIM any_whitespace? map_expression_atom+?)*)?
+    ( expression_atom+? (( (map_separator_operator | map_association_operator) expression_atom+? )+)? )?
 any_whitespace? CLOSE_MAP ;
-association_operator : any_whitespace? ASSOCIATION any_whitespace? ;
+map_separator_operator : any_whitespace? MAP_SEPARATOR any_whitespace? ;
+map_association_operator : any_whitespace? MAP_ASSOCIATION any_whitespace? ;
 
 block_literal : OPEN_BLOCK any_whitespace?
     (expression_atom+?)?

@@ -1,6 +1,6 @@
 import RuntimeError from "../utils/RuntimeError";
 
-import { is } from "./Representations";
+import { repr, is } from "./Representations";
 
 import Message from "../utils/Message";
 
@@ -11,43 +11,75 @@ import ProtoVisitor from '../lang/ProtoVisitor';             // Custom
 import ProtoErrorListener from "../lang/ProtoErrorListener"; // Custom
 const { CommonTokenStream, InputStream } = antlr4;
 
-const runBlock = (astBlock, args) => {
-  let ret = null; // Void
-  for (const node of astBlock.children) {
-    ret = evaluate(node, { args: args, block: astBlock });
-  }
-  return ret;
-}
+const state = {
+  stackHead: null
+};
 
 const evaluate = (astNode, context) => {
-  // If a parameter, extract from args
+  // If a literal, create it's runtime representation
+  if (is.number(astNode))  return new repr.RuntimeNumber(astNode);
+  if (is.text(astNode))    return new repr.RuntimeText(astNode);
+  if (is.logical(astNode)) return new repr.RuntimeLogical(astNode);
+
+  if (is.map(astNode)) {
+    // TODO
+    return new repr.RuntimeMap(astNode, astNode.children.map((child) => evaluate(child, context)));
+  }
+
+  if (is.block(astNode)) {
+    return new repr.RuntimeBlock(astNode, context);
+  }
+
+  // If a parameter, get value from args
   if (is.parameter(astNode)) {
     if (context.args.length < astNode.index) {
       throw new RuntimeError(
         `Parameter ${astNode.index} requested, `+
-        `but only ${context.args.length} arguments were given `+
-        `(in block ${context.block.toString()})`
+        `but only ${context.args.length} arguments were given in:\n`+
+        context.getStackTraceStr()
       );
     }
-    // This is where the extraction algo would be run
+
+    // TODO: This is where the extraction/windowing/typechecking algo would be run
     return context.args[astNode.index - 1];
   }
 
-  // If a sentence, evaluate it
-  if (is.sentence(astNode)) {
-    let value = evaluate(astNode.ref, context);
+  // If a declaration, evaluate its sentence and bind the resulting value
+  if (is.declaration(astNode)) {
+    context.decls.set(astNode, evaluate(astNode.sentence, context));
+    return null;
+  }
 
-    // If its ref is a block, run it
-    if (is.block(value)) {
+  // If a sentence, get value from context declarations
+  if (is.sentence(astNode)) {
+    let value = context.decls.get(astNode.decl);
+
+    // If its value is a block, evaluate its arguments and run it
+    if (is.runtimeBlock(value)) {
       const args = astNode.params.map((param) => evaluate(param, context));
       value = runBlock(value, args);
     }
 
     return value;
   }
+}
 
-  // If not a sentence, then return it verbatim
-  return astNode;
+const runBlock = (block, args) => {
+  // Setup
+  let ret = null;
+  block.setupRun(state.stackHead, args);
+  state.stackHead = block;
+
+  // Evaluate each child of block
+  for (const node of block.astBlock.children) {
+    const value = evaluate(node, state.stackHead);
+    if (value != null) ret = value;
+  }
+
+  // Teardown
+  state.stackHead = state.stackHead.parent;
+  block.teardownRun();
+  return ret;
 }
 
 const commands = {
@@ -120,7 +152,7 @@ const commands = {
 
     } else {
       try {
-        const result = runBlock(ast, [programInput]); // The root block (ie. the program)
+        const result = runBlock(new repr.RuntimeBlock(ast), [repr.RuntimeText.fromRaw(programInput)]); // The root block (ie. the program)
 
         output.push(new Message("success", "I'm done."));
         if (result == null) {
