@@ -138,20 +138,27 @@ export class SeparatorOperator extends Repr {
 }
 export const isSeparatorOp = (node) => node != null && node.constructor === SeparatorOperator;
 
+export class UsingOperator extends Repr {
+    length = () => 6;
+    toString = () => "using "
+}
+export const isUsingOp = (node) => node != null && node.constructor === UsingOperator;
+
 export class DeclarationOperator extends Repr {
     length = () => 1;
     toString = () => " : "
 }
-export const isPlaceholderOp = (node) => node != null && node.constructor === PlaceholderOperator;
+export const isDeclarationOp = (node) => node != null && node.constructor === DeclarationOperator;
 
 export class PlaceholderOperator extends Repr {
     length = () => 1;
     toString = () => "|"
 }
-export const isDeclarationOp = (node) => node != null && node.constructor === DeclarationOperator;
+export const isPlaceholderOp = (node) => node != null && node.constructor === PlaceholderOperator;
 
-// Used to represent arguments to a sentence template, ie. the
-// values (or possibly sub-sentences) that fill in placeholders.
+// Used to represent the unparsed arguments (values or sub-sentences)
+// that fill in placeholders duing sentence parsing until the sentence
+// is finalised.
 export class Argument extends Repr {
     constructor(children = []) {
         super();
@@ -183,6 +190,18 @@ export class Sentence extends Repr {
     toString = () => "{ SENTENCE (decl: "+this.decl.toString()+") }";
 }
 export const isSentence = (node) => node != null && node.constructor === Sentence;
+
+export class Using extends Repr {
+    constructor(decl, params) {
+        super();
+        this.decl = decl;
+        this.params = params;
+    }
+
+    length = () => this.parts.reduce((accum, part) => accum + part.length(), 0);
+    toString = () => "{ SENTENCE (decl: "+this.decl.toString()+") }";
+}
+export const isUsing = (node) => node != null && node.constructor === Using;
 
 export class Declaration extends Repr {
     constructor(template, sentence) {
@@ -596,8 +615,9 @@ export const repr = Object.freeze({
 
     // Intermediate Build-Time AST Node Types
     SentenceFragment,
-    ExplicitSoftTerminator: ExplicitSoftTerminator,
-    ExplicitHardTerminator: ExplicitHardTerminator,
+    UsingOperator,
+    ExplicitSoftTerminator,
+    ExplicitHardTerminator,
     SeparatorOperator,
     AssociationOperator,
     DeclarationOperator,
@@ -606,6 +626,7 @@ export const repr = Object.freeze({
 
     // Final Build-Time AST Node Types
     Sentence,
+    Using,
     Declaration,
     Parameter,
     Number,
@@ -624,8 +645,11 @@ export const repr = Object.freeze({
 });
 
 export const is = {
+    repr: isRepr,
+
     // Intermediate Build-Time AST Node Types
     sentenceFragment: isSentenceFragment,
+    usingOp: isUsingOp,
     explicitSoftTerminator: isExplicitSoftTerminator,
     explicitHardTerminator: isExplicitHardTerminator,
     separatorOp: isSeparatorOp,
@@ -636,6 +660,7 @@ export const is = {
 
     // Final Build-Time AST Node Types
     sentence: isSentence,
+    using: isUsing,
     declaration: isDeclaration,
     parameter: isParameter,
     number: isNumber,

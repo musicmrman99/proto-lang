@@ -27,6 +27,7 @@ expression_atom : (
   | comment
 
     // Sentences (reorganised in 2nd-phase parse/link)
+  | using_operator
   | sentence_fragment
 ) ;
 
@@ -57,6 +58,7 @@ parameter : OPEN_PARAMETER parameter_index? parameter_extraction? ;
 // Sentences
 declaration_operator : any_whitespace? IS_DEFINED_AS any_whitespace? ;
 placeholder_operator : PLACEHOLDER ;
+using_operator : OPEN_USING ;
 sentence_fragment : WORD | UNCOMPOSED_RESERVED_WORD | DECIMAL_POINT | SPACE ;
 
 // Language-aware kinds of whitespace

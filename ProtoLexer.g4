@@ -27,12 +27,18 @@ fragment WORD_CHAR : (
   | DOMAIN_SYMBOL
 ) ;
 
-// These allow reserved operator symbols to be used in ordinary sentences.
-// This set of characters must be mutually exclusive with WORD_CHAR, or the lexer will exhibit undesirable behaviour.
+// "uncomposed reserved" characters being separate from WORD_CHAR forces the lexer to stop
+// just before one of these characters and begin lexing a new token (due to the rules below),
+// which could be a reserved word.
+// If these characters do not match any reserved word token, then a token considered equivalent 
+//to an ordinary WORD token will consume them so that they may be used for custom semantics in
+// sentences.
+// WARNING: This set of characters must be mutually exclusive with WORD_CHAR, or the lexer will
+//          exhibit undesirable behaviour.
 // Included in parser: decimal point
-// Includes: associations, 'true'/'false'
+// Includes: associations, 'true'/'false', 'using'
 // Excludes: comments, numbers, text, maps, blocks, parameters, sentence def chars (`:` and `|`)
-fragment UNCOMPOSED_RESERVED_CHAR : [\-<>ft] ;
+fragment UNCOMPOSED_RESERVED_CHAR : [\-<>ftu] ;
 
 // Comment-only characters
 fragment COMMENT_PERMITTED_CHAR : [\u2500-\u257F] ; // \u2500-\u257F are the box-drawing characters
@@ -57,7 +63,7 @@ CLOSE_COMMENT_BLOCK : '}#' ;
 SPACE : SPACE_CHAR+ ;
 NEWLINE : NEWLINE_CHAR ;
 
-/* Primitive Literal Components
+/* Values (Literals and Syntactic Expressions)
 -------------------- */
 
 // Numbers (and indexes for Parameters)
@@ -83,14 +89,18 @@ OPEN_BLOCK : '{' ;
 // Parameters
 OPEN_PARAMETER : '@' ;
 
+/* Sentences and Using
+-------------------- */
+
+// Using
+// Using is treated somewhat similarly to the sentence template 'using |'
+// to determine what it applies to.
+OPEN_USING : 'using ' ;
+
 // Sentences
 IS_DEFINED_AS : ':' ;
 PLACEHOLDER : '|' ;
 WORD : WORD_CHAR+ ;
-  // "uncomposed reserved" characters are reserved when they appear together in a specific
-  // sequence, but these characters did not match any such token, so may be used for custom
-  // semantics in sentences. Care should always be taken when using "uncomposed reserved"
-  // characters in Proto code.
 UNCOMPOSED_RESERVED_WORD : UNCOMPOSED_RESERVED_CHAR ;
 
 // Comment-only characters
