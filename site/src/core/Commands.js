@@ -64,19 +64,19 @@ const evaluate = (astNode, context) => {
   }
 
   // If a `using` clause, get block from context declarations
-  //*
-  /*
-  x | | : {[@1, @2]}
-  { using x | {1} } -> { <P : {1}> { x @1 using P } }
-  */
-
   if (is.using(astNode)) {
     let value = context.decls.get(astNode.decl);
 
     // If its value is a block, and not all of its arguments are placeholders,
     // then evaluate its arguments and construct a block that runs it.
     // This basically generates the code that is equivalent to this recursive-case
-    // of a `using` clause and runs the bits of it now that need to be run now.
+    // of a `using` clause:
+    //   x | | : {[@1, @2]} # Test declaration
+    //   # This:
+    //   using x | {1}
+    //   # Becomes:
+    //   arg1 : {1} # Numbers in sentence templates are usually illegal
+    //   { x @1 using arg1 }
     if (is.runtimeBlock(value) && !astNode.params.every(is.placeholderOp)) {
       // Translate the arguments given into:
       let paramNum = 1;
@@ -118,7 +118,6 @@ const evaluate = (astNode, context) => {
 
     return value;
   }
-  //*/
 }
 
 const runBlock = (block, args) => {
