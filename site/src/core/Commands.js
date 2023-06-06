@@ -62,6 +62,63 @@ const evaluate = (astNode, context) => {
 
     return value;
   }
+
+  // If a `using` clause, get block from context declarations
+  //*
+  /*
+  x | | : {[@1, @2]}
+  { using x | {1} } -> { <P : {1}> { x @1 using P } }
+  */
+
+  if (is.using(astNode)) {
+    let value = context.decls.get(astNode.decl);
+
+    // If its value is a block, and not all of its arguments are placeholders,
+    // then evaluate its arguments and construct a block that runs it.
+    // This basically generates the code that is equivalent to this recursive-case
+    // of a `using` clause and runs the bits of it now that need to be run now.
+    if (is.runtimeBlock(value) && !astNode.params.every(is.placeholderOp)) {
+      // Translate the arguments given into:
+      let paramNum = 1;
+      const tempContextASTDecls = [];
+      const wrappedSentenceASTArgs = astNode.params.map((param) => {
+        // A parameter for each non-bound argument
+        if (is.placeholderOp(param)) {
+          return new repr.Parameter(paramNum++, new repr.Map());
+
+        // Another 'using' clause of a temporary declaration for each bound argument
+        } else {
+          const tempContextASTDecl = new repr.Declaration(
+            // Use a sentence template that helps in debugging
+            [new repr.SentenceFragment(astNode.id+"-param-"+paramNum)],
+            param
+          );
+          tempContextASTDecls.push(tempContextASTDecl);
+          // Will recurse once, but always to the base-case of the `using` evaluation
+          return new repr.Using(tempContextASTDecl, []);
+        }
+      });
+
+      // Create a `using` block that must enclose over those temporary declarations
+      const block = new repr.Block();
+      block.parent = context.astNode;
+      block.children.push(new repr.Sentence(astNode.decl, wrappedSentenceASTArgs));
+      block.reqEncDecls.push(astNode.decl, ...tempContextASTDecls);
+      // A `using` block has no declarations
+
+      // The computed value of the `using` clause is the evaluation of the `using`
+      // block in a temporarily modified context.
+      const oldDecls = context.decls;
+      tempContextASTDecls.forEach(
+        (tempContextASTDecl) => evaluate(tempContextASTDecl, context)
+      );
+      value = evaluate(block, context);
+      context.decls = oldDecls;
+    }
+
+    return value;
+  }
+  //*/
 }
 
 const runBlock = (block, args) => {
@@ -152,7 +209,11 @@ const commands = {
 
     } else {
       try {
-        const result = runBlock(new repr.RuntimeBlock(ast), [repr.RuntimeText.fromRaw(programInput)]); // The root block (ie. the program)
+        // Compute the root block (ie. run the program)
+        const result = runBlock(
+          new repr.RuntimeBlock(ast),
+          [repr.RuntimeText.fromRaw(programInput)]
+        );
 
         output.push(new Message("success", "I'm done."));
         if (result == null) {
