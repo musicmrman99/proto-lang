@@ -548,8 +548,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             .map((decl) => [decl]
                 // Get the list of matches of the sentence
                 .flatMap((decl) => isUsingClause ?
-                    this.getAllTemplateMatches(sentence.slice(1), decl.template, true) :
-                    this.getAllTemplateMatches(sentence, decl.template, false)
+                    this.getAllTemplateMatches(sentence.slice(1), decl.template) :
+                    this.getAllTemplateMatches(sentence, decl.template)
                 )
                 // Embed the declaration that let to those matches into each match
                 .map((sentenceCandidate) => [decl, sentenceCandidate])
@@ -660,18 +660,12 @@ export default class ProtoVisitor extends ProtoParserVisitor {
      * 
      * @param {Array<repr.Repr>} sentence The input sentence to match against the template.
      * @param {Array<repr.Repr>} template The template to match against.
-     * @param {boolean} acceptUnboundArgs Whether to consider a placeholder in the
-     *   sentence to be a valid argument of the template. If this is true, and a
-     *   placeholder is found in the sentence at the same location as a placeholder
-     *   in the template, it is considered an unbound argument and kept as a
-     *   PlaceholderOperator in the returned list.
      * @return {Array<Array<repr.Repr>>} The list of possible combinations of sentences
      *   (as Reprs).
      */
     getAllTemplateMatches(
             sentence,
             template,
-            acceptUnboundArgs,
             sentenceInfo = { nodeIndex: 0, strIndex: 0 }
     ) {
         /* 1) Zero-case (recursive base-case)
@@ -689,14 +683,6 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // Initial sentence/template nodes
         let sentenceNode = sentence[sentenceInfo.nodeIndex];
         let templateNode = template[0]; // Try the first node (fragment or placeholder) initially
-
-        // If this is true, then unbound argument (ie. placeholder) matching becomes required for
-        // this branch of the binary fork.
-        const isUnboundArg = (
-            acceptUnboundArgs &&
-            sentenceInfo.nodeIndex === 0 &&
-            is.placeholderOp(sentence[sentenceInfo.nodeIndex]) // If sentence length is 0, this will be false
-        );
 
         /* 3) Initial node is a fragment - align remaining sentence to (placeholder, fragment) pairs
         -------------------- */
@@ -756,10 +742,9 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 // Continue checking for this fragment
             matches.push(
                 ...this.getAllTemplateMatches(
-                    sentence,          // Check the remaining sentence nodes
-                    template,          // Keep looking for the same template fragment
-                    acceptUnboundArgs, // Use the same parsing strategy for the whole sentence
-                    {                  // Check from the beginning of the remaining sentence nodes
+                    sentence, // Check the remaining sentence nodes
+                    template, // Keep looking for the same template fragment
+                    {         // Check from the beginning of the remaining sentence nodes
                         nodeIndex: nextNodeIndex,
                         strIndex: nextStrIndex
                     }
@@ -771,7 +756,6 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 ...this.getAllTemplateMatches(
                     remainingNodes,               // Check the remaining sentence nodes
                     template.slice(1),            // Slice off the matched template fragment
-                    acceptUnboundArgs,            // Use the same parsing strategy for the whole sentence
                     { nodeIndex: 0, strIndex: 0 } // Start looking at the beginning of the remaining sentence fragment
                 ).reduce(
                     // eslint-disable-next-line no-loop-func -- the closure over templateNode is never used outside or across iterations of the loop
@@ -794,19 +778,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         // input. If there is any remaining input, match it (a placeholder must match at least one 'thing' - a
         // single character of sentence fragment, or a literal or other node).
         if (template.length === 1) { // It must be a placeholder
-            if (isUnboundArg) {
-                // 4a.1) Fail if there's more content after the placeholder
-                if (sentence.length > 1) return matches;
-
-                // 4a.2) Add the placeholder as a match
-                matches.push([sentence[0]]);
-
-            } else {
-                // 4b.1) If there is anything left, add it. Not adding anything is equivalent to failing.
-                const sentenceLength = sentence.reduce((accum, node) => accum + node.length(), 0)
-                if (sentenceLength >= 1) {
-                    matches.push([new repr.Argument(sentence)]);
-                }
+            // Note: Not adding anything is equivalent to failing.
+            const sentenceLength = sentence.reduce((accum, node) => accum + node.length(), 0)
+            if (sentenceLength >= 1) {
+                matches.push([new repr.Argument(sentence)]);
             }
             return matches;
         }
@@ -827,16 +802,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
           binary fork, and return the matches.
         */
 
-        // 5.1) If we are matching a placeholder, skip the placeholder node in the sentence.
-        //      In this case, the first node that the template fragment both could and must
-        //      match is the node after it.
-        if (isUnboundArg) sentenceInfo.nodeIndex++;
-
-        // 5.2) If:
-        // - We are matching a placeholder, then try to match the fragment immediately,
-        //   failing if that fails.
-        // - We are not matching a placeholder, then keep consuming input until the first
-        //   fragment match.
+        // 5.1) Keep consuming input until the first fragment match.
         let sentenceSplice = null;
         while (sentenceInfo.nodeIndex < sentence.length) {
             // Update sentence/template node variables
@@ -844,25 +810,18 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             templateNode = template[1]; // The fragment
             sentenceInfo.strIndex = is.sentenceFragment(sentenceNode) ? 0 : null;
 
-            // 5.3) If the node cannot match the fragment ...
+            // 5.2) If the node cannot match the fragment, skip it.
             if (!is.sentenceFragment(sentenceNode)) {
-                // If matching a placeholder, fail immediately without looking at further nodes.
-                if (isUnboundArg) return matches;
-
-                // If not matching a placeholder, skip it.
                 sentenceInfo.nodeIndex++;
                 continue;
             }
 
-            // 5.4) Attempt to match the next template fragment
+            // 5.3) Attempt to match the next template fragment
             sentenceSplice = this.spliceTemplateFragment(
                 templateNode, sentenceNode, sentenceInfo.strIndex
             );
 
-            // 5.5) If matching a placeholder, fail if the first node does not match the fragment.
-            if (isUnboundArg && sentenceSplice == null) return matches;
-
-            // 5.6) If no match, iterate to next sentence node; if found a match, continue out of the loop.
+            // 5.4) If no match, iterate to next sentence node; if found a match, continue out of the loop.
             if (sentenceSplice === null) {
                 sentenceInfo.nodeIndex++;
                 continue;
@@ -871,10 +830,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             }
         }
 
-        // 5.7) Fail if there were no matches in the rest of the sentence
+        // 5.5) Fail if there were no matches in the rest of the sentence
         if (sentenceSplice === null) return matches;
 
-        // 5.8) Reorganise the sentence into the consumed part and the remaining part
+        // 5.6) Reorganise the sentence into the consumed part and the remaining part
         const [
             initialSentenceFragment,
             remainingSentenceFragment,
@@ -882,10 +841,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             remainingStart
         ] = sentenceSplice;
 
-        // 5.9) If matching a placeholder, fail if the next node does not match the fragment immediately.
-        if (isUnboundArg && initialSentenceFragment.content !== "") return matches;
-
-        // 5.10) Determine next indexes (ie. the ones used in the first part of the binary fork)
+        // 5.7) Determine next indexes (ie. the ones used in the first part of the binary fork)
         let nextNodeIndex = sentenceInfo.nodeIndex;
         let nextStrIndex = remainingStart;
 
@@ -895,8 +851,8 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             nextStrIndex = 0;
         }
 
-        // 5.11) Splice sentence into [consumed nodes, fragment match (discarded), remaining nodes],
-        //       excluding the initial/remaining fragments if they have no content
+        // 5.8) Splice sentence into [consumed nodes, fragment match (discarded), remaining nodes],
+        //      excluding the initial/remaining fragments if they have no content
         const consumedNodes = [
             ...sentence.slice(0, sentenceInfo.nodeIndex), // Every node before this fragment node,
             ...(                                          // Plus the part of the fragment before the template fragment match if not empty.
@@ -915,42 +871,35 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             ...sentence.slice(sentenceInfo.nodeIndex + 1)  // Plus every node after this fragment node
         ];
 
-        // 5.12) Fail if the placeholder match is a zero-length match
+        // 5.9) Fail if the placeholder match is a zero-length match
         const consumedNodesLength = consumedNodes.reduce((accum, node) => accum + node.length(), 0);
         if (consumedNodesLength === 0) return matches; // Did not match placeholder
 
-        // 5.13) Construct Repr for this placeholder match
+        // 5.10) Construct Repr for this placeholder match
         const argument = new repr.Argument(consumedNodes);
 
-        // 5.14) Base Case: Return sentence as it stands
+        // 5.11) Base Case: Return sentence as it stands
         const remainingNodesLength = remainingNodes.reduce((accum, node) => accum + node.length(), 0);
         if (remainingNodesLength === 0) return [[argument, templateNode]];
 
-        // 5.15) Recursive Case: Binary fork (as described above)
+        // 5.12) Recursive Case: Binary fork (as described above)
             // Continue checking for this fragment
-            // Note: If we are matching a placeholder, we either have matched at the top level
-            //       of this branch or never will (as the fragment must be found immediately
-            //       after the placeholder).
-        if (!isUnboundArg) {
-            matches.push(
-                ...this.getAllTemplateMatches(
-                    sentence,          // Check the remaining sentence nodes
-                    template,          // Keep looking for the same template fragment
-                    acceptUnboundArgs, // Use the same parsing strategy for the whole sentence
-                    {                  // Check from the beginning of the remaining sentence nodes
-                        nodeIndex: nextNodeIndex,
-                        strIndex: nextStrIndex
-                    }
-                )
-            );
-        }
+        matches.push(
+            ...this.getAllTemplateMatches(
+                sentence, // Check the remaining sentence nodes
+                template, // Keep looking for the same template fragment
+                {         // Check from the beginning of the remaining sentence nodes
+                    nodeIndex: nextNodeIndex,
+                    strIndex: nextStrIndex
+                }
+            )
+        );
 
             // Advance to next placeholder/fragment pair
         matches.push(
             ...this.getAllTemplateMatches(
                 remainingNodes,               // Check the remaining sentence nodes
                 template.slice(2),            // Slice off the matched template placeholder and fragment
-                acceptUnboundArgs,            // Use the same parsing strategy for the whole sentence
                 { nodeIndex: 0, strIndex: 0 } // Check from the beginning of the remaining sentence nodes
             ).reduce(
                 // eslint-disable-next-line no-loop-func -- the closure over templateNode is never used outside or across iterations of the loop
