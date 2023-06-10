@@ -23,12 +23,12 @@ export default class Toolbar extends react.Component {
         <Button
           label="Build" icon="construction"
           iconLocation="top"
-          onClick={() => this.props.onBuild(...commands.build(this.props.protoSource, this.props.buildConfig))}
+          onClick={() => this.props.onBuild(...commands.build(this.props.buildConfig, this.props.protoSource))}
         />
         <Button
           label="Run" icon="settings"
           iconLocation="top"
-          onClick={() => this.props.onRun(commands.run(this.props.ast, this.props.programInput))}
+          onClick={() => this.props.onRun(...commands.run(this.props.ast, this.props.programInput))}
         />
 
         <Separator spacing="medium" />
