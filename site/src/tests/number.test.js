@@ -6,7 +6,7 @@ const defaultMods = [
     mock.repr.modifiers.dataOnly
 ];
 
-it('creates a number', () => pipeline()
+it('creates the number zero', () => pipeline()
     .build(mock.proto.code("0"))
     .verifyAst(
         mock.repr.ast.block([mock.repr.ast.number(0).with(defaultMods)], [], []).with(defaultMods)
@@ -17,3 +17,44 @@ it('creates a number', () => pipeline()
     )
     .success()
 );
+
+it('creates an integer number', () => pipeline()
+    .build(mock.proto.code("1563"))
+    .verifyAst(
+        mock.repr.ast.block([mock.repr.ast.number(1563).with(defaultMods)], [], []).with(defaultMods)
+    )
+    .run()
+    .verifyResult(({targetAst}) =>
+        mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
+    )
+    .success()
+);
+
+it('creates a real number (1dp)', () => pipeline()
+    .build(mock.proto.code("156.3"))
+    .verifyAst(
+        mock.repr.ast.block([mock.repr.ast.number(156.3).with(defaultMods)], [], []).with(defaultMods)
+    )
+    .run()
+    .verifyResult(({targetAst}) =>
+        mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
+    )
+    .success()
+);
+
+it('creates a real number (>1dp)', () => pipeline()
+    .build(mock.proto.code("156.3623"))
+    .verifyAst(
+        mock.repr.ast.block([mock.repr.ast.number(156.3623).with(defaultMods)], [], []).with(defaultMods)
+    )
+    .run()
+    .verifyResult(({targetAst}) =>
+        mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
+    )
+    .success()
+);
+
+/*
+ * Test:
+ * - Non-normative encodings, eg. exponents, omitting the whole part of a real number, etc.
+ */

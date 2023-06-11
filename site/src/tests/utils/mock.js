@@ -127,6 +127,18 @@ const mock = Object.freeze({
                 return mock.repr.modifiers.wrap(
                     new repr.RuntimeNumber(astNumber)
                 );
+            },
+            text: (astText) => {
+                requireMockArg("RuntimeText", "astText", astText);
+                return mock.repr.modifiers.wrap(
+                    new repr.RuntimeText(astText)
+                );
+            },
+            logical: (astLogical) => {
+                requireMockArg("RuntimeLogical", "astLogical", astLogical);
+                return mock.repr.modifiers.wrap(
+                    new repr.RuntimeLogical(astLogical)
+                );
             }
         }
     })
