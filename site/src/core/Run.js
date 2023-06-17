@@ -19,7 +19,24 @@ const evaluate = (astNode, context) => {
   }
 
   if (is.block(astNode)) {
-    return new repr.RuntimeBlock(astNode, context);
+    const block = new repr.RuntimeBlock(astNode, context);
+
+    if (context != null) { // If not the root of the stack
+      astNode.reqEncDecls.forEach((reqEncDecl) => {
+        const value = context.getStackDeclValue(reqEncDecl);
+        if (value == null) {
+          // Should never happen, as it should throw a build-time error,
+          // but it may happen in the future if reflection is ever introduced.
+          throw new RuntimeError(
+            `Required enclosing declaration '${reqEncDecl.toString()}' not found in:\n`+
+            block.getStackTraceStr()
+          );
+        }
+        block.encDecls.set(reqEncDecl, value);
+      });
+    }
+
+    return block;
   }
 
   // If a parameter, get value from args
@@ -115,7 +132,12 @@ const evaluate = (astNode, context) => {
 const runBlock = (block, args) => {
   // Setup
   let ret = null;
-  block.setupRun(state.stackHead, args);
+
+  block.parent = state.stackHead;
+  block.args = args;
+  block.decls = new repr.Repr.Mapping(is.declaration, is.repr);
+  block.decls.mergeIn(block.encDecls);
+
   state.stackHead = block;
 
   // Evaluate each child of block
@@ -126,7 +148,11 @@ const runBlock = (block, args) => {
 
   // Teardown
   state.stackHead = state.stackHead.parent;
-  block.teardownRun();
+
+  block.parent = null;
+  block.args = null;
+  block.decls = null;
+
   return ret;
 }
 

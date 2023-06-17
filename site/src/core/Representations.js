@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import BuildError from '../utils/BuildError';
-import RuntimeError from '../utils/RuntimeError';
 
 /* Util
 -------------------------------------------------- */
@@ -409,26 +408,12 @@ export class RuntimeMap extends MapInterface {
 export const isRuntimeMap = (node) => node != null && node.constructor === RuntimeMap;
 
 export class RuntimeBlock extends MapInterface {
-    constructor(astBlock, context) {
+    constructor(astBlock) {
         super();
 
         // Known when the block is created
         this.astBlock = astBlock;
         this.encDecls = new Repr.Mapping(isDeclaration, isRepr);
-        if (context != null) { // If not the root of the stack
-            astBlock.reqEncDecls.forEach((reqEncDecl) => {
-                const value = context.getStackDeclValue(reqEncDecl);
-                if (value == null) {
-                    // Should never happen, as it should throw a build-time error,
-                    // but it may happen in the future if reflection is ever introduced.
-                    throw new RuntimeError(
-                        `Required enclosing declaration '${reqEncDecl.toString()}' not found in:\n`+
-                        this.getStackTraceStr()
-                    );
-                }
-                this.encDecls.set(reqEncDecl, value);
-            });
-        }
 
         // Not known until the block is run (possibly more than once)
         this.parent = null;
@@ -438,29 +423,6 @@ export class RuntimeBlock extends MapInterface {
 
     /* Block methods
     -------------------- */
-
-    /**
-     * Set the runtime block up for execution.
-     * 
-     * @param {Array<Repr>} args An array of runtime representations to be used as arguments
-     *   for this execution of this block.
-     */
-    setupRun = (parent, args) => {
-        this.parent = parent;
-        this.args = args;
-        this.decls = (new Repr.Mapping(isDeclaration, isRepr));
-        this.decls.mergeIn(this.encDecls);
-    }
-
-    /**
-     * Teardown the execution setup of the block (see setupBlockRun()) after the execution of
-     * the block has completed (successfully or otherwise).
-     */
-    teardownRun = () => {
-        this.parent = null;
-        this.args = null;
-        this.decls = null;
-    }
 
     /**
      * Return the value of the given declaration in all blocks above this block on
