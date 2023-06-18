@@ -1,7 +1,7 @@
 import react from 'react';
 import './App.css';
 
-import { configDefault } from '../core/Config';
+import { configDefault } from '../lang/Config';
 
 import Toolbar from './Toolbar';
 import LanguageSpace from './LanguageSpace';

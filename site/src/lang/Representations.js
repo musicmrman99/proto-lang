@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import BuildError from '../utils/BuildError';
+import BuildError from './errors/BuildError';
 
 /* Util
 -------------------------------------------------- */
@@ -84,7 +84,19 @@ export class Repr {
 }
 export const isRepr = (node) => node != null && Repr.get(node.id) != null;
 
-/* Intermediate Representations
+/* General Representations
+-------------------- */
+
+export class Message extends Repr {
+    constructor(type, content) {
+        super();
+        this.type = type;
+        this.content = content;
+    }
+}
+export const isMessage = (node) => node != null && node.constructor === Message;
+
+/* Build-Time Intermediate Representations
 -------------------- */
 
 export class SentenceFragment extends Repr {
@@ -171,7 +183,7 @@ export class Argument extends Repr {
 }
 export const isArgument = (node) => node != null && node.constructor === Argument;
 
-/* Final Representations
+/* Build-Time Final Representations
 -------------------- */
 
 // Association - not needed, because they're put into the containing map
@@ -304,7 +316,7 @@ export class Parameter extends Repr {
 }
 export const isParameter = (node) => node != null && node.constructor === Parameter;
 
-/* Runtime Representations
+/* Run-Time Representations
 -------------------- */
 
 /**
@@ -575,7 +587,10 @@ export const isTerminator = (node) => isSoftTerminator(node) || isHardTerminator
 export const repr = Object.freeze({
     Repr,
 
-    // Intermediate Build-Time AST Node Types
+    // General Types
+    Message,
+
+    // Build-Time Intermediate AST Node Types
     SentenceFragment,
     UsingOperator,
     ExplicitSoftTerminator,
@@ -586,7 +601,7 @@ export const repr = Object.freeze({
     PlaceholderOperator,
     Argument,
 
-    // Final Build-Time AST Node Types
+    // Build-Time Final AST Node Types
     Sentence,
     Using,
     Declaration,
@@ -609,7 +624,10 @@ export const repr = Object.freeze({
 export const is = {
     repr: isRepr,
 
-    // Intermediate Build-Time AST Node Types
+    // General Types
+    message: isMessage,
+
+    // Build-Time Intermediate AST Node Types
     sentenceFragment: isSentenceFragment,
     usingOp: isUsingOp,
     explicitSoftTerminator: isExplicitSoftTerminator,
@@ -620,7 +638,7 @@ export const is = {
     placeholderOp: isPlaceholderOp,
     argument: isArgument,
 
-    // Final Build-Time AST Node Types
+    // Build-Time Final AST Node Types
     sentence: isSentence,
     using: isUsing,
     declaration: isDeclaration,
@@ -631,7 +649,7 @@ export const is = {
     map: isMap,
     block: isBlock,
 
-    // Abstract Build-Time AST Node Types
+    // Build-Time Abstract AST Node Types
     value: isValue,
     literal: isLiteral,
     nestable: isNestable,

@@ -3,4 +3,4 @@
 
 /tests/build
 /site/node_modules
-/site/src/lang/build
+/site/src/lang/antlr-parser

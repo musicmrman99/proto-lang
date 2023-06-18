@@ -1,7 +1,5 @@
-import { repr, is } from "./Representations";
-import RuntimeError from "../utils/RuntimeError";
-
-import Message from "../utils/Message";
+import { repr, is } from "../Representations";
+import RuntimeError from "../errors/RuntimeError";
 
 const state = {
   stackHead: null
@@ -173,7 +171,7 @@ const run = (ast, programInput) => {
   // Check for build errors
   if (ast == null) {
     log.success = false;
-    log.output.push(new Message("error", "Cannot run program until it is successfully built"));
+    log.output.push(new repr.Message("error", "Cannot run program until it is successfully built"));
   }
 
   let result = null;
@@ -185,11 +183,11 @@ const run = (ast, programInput) => {
         [repr.RuntimeText.fromRaw(programInput)]
       );
 
-      log.output.push(new Message("success", "I'm done."));
+      log.output.push(new repr.Message("success", "I'm done."));
       if (result == null) {
-        log.output.push(new Message("info", "No result."));
+        log.output.push(new repr.Message("info", "No result."));
       } else {
-        log.output.push(new Message("info", "Result: " + result.toString()));
+        log.output.push(new repr.Message("info", "Result: " + result.toString()));
       }
 
     } catch (e) {
@@ -197,7 +195,7 @@ const run = (ast, programInput) => {
 
       log.success = false;
       log.output.push(
-        new Message("error", "Runtime Error: " + e.message)
+        new repr.Message("error", "Runtime Error: " + e.message)
       );
     }
   }

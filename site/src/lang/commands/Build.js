@@ -1,13 +1,16 @@
-import Message from '../utils/Message';
-import ProtoParserVisitor from './build/ProtoParserVisitor';
+import { repr, is, format } from "../Representations";
 
-import { repr, is, format } from '../core/Representations';
+import antlr4 from 'antlr4';
+import ProtoLexer from '../antlr-parser/ProtoLexer.js';
+import ProtoParser from '../antlr-parser/ProtoParser.js';
+import ProtoParserVisitor from '../antlr-parser/ProtoParserVisitor';
+const { CommonTokenStream, InputStream } = antlr4;
 
 /* Parser
 -------------------------------------------------- */
 
 // This class defines a complete visitor for a parse tree produced by ProtoParser.
-export default class ProtoVisitor extends ProtoParserVisitor {
+class ProtoVisitor extends ProtoParserVisitor {
     /**
      * Create an ANTLR visitor for the output of the 1st phase parser.
      * 
@@ -257,7 +260,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 if (is.hardTerminator(terminator)) {
                     this.log.success = false;
                     this.log.output.push(
-                        new Message("error", "Incomplete Sentence: " + format.nodeListToString(candidateNodes))
+                        new repr.Message("error", "Incomplete Sentence: " + format.nodeListToString(candidateNodes))
                     );
                 }
                 return;
@@ -278,12 +281,12 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 // We're now out of the 'value of a declaration' context, so further declarations are allowed.
                 declTemplate = true;
 
-                this.log.output.push(new Message("info", "New Declaration: " + decl.toString()));
+                this.log.output.push(new repr.Message("info", "New Declaration: " + decl.toString()));
 
             } else {
                 finalChildren.push(sentence);
 
-                this.log.output.push(new Message("info", "New Sentence: " + sentence.toString()));
+                this.log.output.push(new repr.Message("info", "New Sentence: " + sentence.toString()));
             }
 
             // Parse nested nodes (recurse into non-nestable child nodes as needed).
@@ -315,24 +318,24 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                     // Error messages - be precise
                     if (!is.hasDeclarations(nestableNode)) {
                         this.log.output.push(
-                            new Message("error",
+                            new repr.Message("error",
                                 "Declaration operator found outside of a block (at the end of " + format.nodeListToString(candidateNodes) + ")"
                             )
                         );
                     } else if (isImpossible(declTemplate)) {
                         this.log.output.push(
-                            new Message("error",
+                            new repr.Message("error",
                                 "Multi-line sentence templates are not supported (" + format.nodeListToString(candidateNodes) + ")"
                             )
                         );
                     } else {
                         this.log.output.push(
-                            new Message("error",
+                            new repr.Message("error",
                                 "Declaration operator found inside of another declaration's value (at end of " + format.nodeListToString(candidateNodes) + ")"
                             )
                         );
                         this.log.output.push(
-                            new Message("info", "Declaration chaining is not supported.")
+                            new repr.Message("info", "Declaration chaining is not supported.")
                         );
                     }
 
@@ -343,7 +346,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 if (!candidateNodes.some(is.sentenceFragment)) {
                     this.log.success = false;
                     this.log.output.push(
-                        new Message("error",
+                        new repr.Message("error",
                             "Sentence templates consists only of placeholders (" + format.nodeListToString(candidateNodes) + ")"
                         )
                     );
@@ -356,7 +359,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 )) {
                     this.log.success = false;
                     this.log.output.push(
-                        new Message("error",
+                        new repr.Message("error",
                             "Sentence templates must not consist only of placeholders (" + format.nodeListToString(candidateNodes) + ")"
                         )
                     );
@@ -523,7 +526,7 @@ export default class ProtoVisitor extends ProtoParserVisitor {
 
         const indentStr = indent > 1 ? "-".repeat(indent-1)+"> " : "";
         const log = (message) => {
-            this.log.output.push(new Message("info", indentStr + message));
+            this.log.output.push(new repr.Message("info", indentStr + message));
         };
 
         log("Parse Sentence: " + format.nodeListToString(sentence));
@@ -908,3 +911,86 @@ export default class ProtoVisitor extends ProtoParserVisitor {
         ];
     }
 }
+
+/* Parser Error Handler
+-------------------------------------------------- */
+
+class ProtoErrorListener extends antlr4.error.ErrorListener {
+  /**
+  * Create an ANTLR listener for the output of the 1st phase parser.
+  * 
+  * @param {{}} config The configuration to use.
+  * @param {{success: boolean, output: Array}} log The logger for errors,
+  *   warnings, and other messages.
+  */
+  constructor(config, log) {
+      super();
+
+      this.config = config;
+      this.log = log;
+  }
+
+  syntaxError(recognizer, offendingSymbol, line, column, msg, err) {
+      this.log.success = false;
+      this.log.output.push(new repr.Message("error", `${offendingSymbol} line ${line}, col ${column}: ${msg}`));
+  }
+}
+
+/* Build Command
+-------------------------------------------------- */
+
+/**
+ * Build an AST from the given Proto source code.
+ * 
+ * @param {object} buildConfig The configuration to use to build the source code.
+ * @param {string} protoSource The source code to build.
+ * @returns {[repr.Repr, {success: boolean, output: Array<Message>}]} The built AST and the build log.
+ */
+const build = (buildConfig, protoSource) => {
+  // Create the logging object
+  const log = {
+    success: true,
+    output: []
+  };
+
+  // Check for configuration errors
+  if (buildConfig == null) {
+    log.success = false;
+    log.output.push(new repr.Message("error", "Build Configuration is invalid - please correct it, then try building again."));
+  }
+
+  // Run lexer / 1st phase parser
+  let tree = null;
+  if (log.success) {
+    const chars = new InputStream(protoSource, true);
+
+    const errorListener = new ProtoErrorListener(buildConfig, log);
+
+    const lexer = new ProtoLexer(chars);
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(errorListener);
+    const tokens  = new CommonTokenStream(lexer);
+
+    const parser = new ProtoParser(tokens);
+    parser.removeErrorListeners();
+    parser.addErrorListener(errorListener);
+    tree = parser.program();
+  }
+
+  // Run 2nd phase parser / linker
+  let ast = null;
+  if (log.success) {
+    const protoLang = new ProtoVisitor(buildConfig, log);
+    ast = protoLang.visit(tree);
+  }
+
+  // Output success/failure
+  if (log.success) {
+    log.output.push(new repr.Message("success", "Ready to Run"));
+  } else {
+    log.output.push(new repr.Message("error", "Errors Found (see above)"));
+  }
+
+  return [ast, log];
+}
+export default build;

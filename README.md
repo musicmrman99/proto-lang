@@ -14,8 +14,8 @@ This is how to build the parser for the execution environment:
 
 In Bash:
 ```bash
-antlr4 -Dlanguage=JavaScript -visitor -no-listener ProtoLexer.g4 -o site/src/lang/build
-antlr4 -Dlanguage=JavaScript -visitor -no-listener ProtoParser.g4 -o site/src/lang/build
+antlr4 -Dlanguage=JavaScript -visitor -no-listener ProtoLexer.g4 -o site/src/lang/antlr-parser
+antlr4 -Dlanguage=JavaScript -visitor -no-listener ProtoParser.g4 -o site/src/lang/antlr-parser
 ```
 
 ## Test Suite
