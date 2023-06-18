@@ -802,32 +802,29 @@ export default class ProtoVisitor extends ProtoParserVisitor {
           binary fork, and return the matches.
         */
 
+        // Util
+        const nextNode = () => {
+            sentenceInfo.nodeIndex++;
+            sentenceNode = sentence[sentenceInfo.nodeIndex]; // undefined if off the end of the sentence
+            sentenceInfo.strIndex = is.sentenceFragment(sentenceNode) ? 0 : null;
+        }
+
+        // Try to match second node (fragment)
+        templateNode = template[1]; // The fragment
+
         // 5.1) Keep consuming input until the first fragment match.
         let sentenceSplice = null;
-        while (sentenceInfo.nodeIndex < sentence.length) {
-            // Update sentence/template node variables
-            sentenceNode = sentence[sentenceInfo.nodeIndex];
-            templateNode = template[1]; // The fragment
-            sentenceInfo.strIndex = is.sentenceFragment(sentenceNode) ? 0 : null;
-
+        for (; sentenceInfo.nodeIndex < sentence.length; nextNode()) {
             // 5.2) If the node cannot match the fragment, skip it.
-            if (!is.sentenceFragment(sentenceNode)) {
-                sentenceInfo.nodeIndex++;
-                continue;
-            }
+            if (!is.sentenceFragment(sentenceNode)) continue;
 
             // 5.3) Attempt to match the next template fragment
             sentenceSplice = this.spliceTemplateFragment(
                 templateNode, sentenceNode, sentenceInfo.strIndex
             );
 
-            // 5.4) If no match, iterate to next sentence node; if found a match, continue out of the loop.
-            if (sentenceSplice === null) {
-                sentenceInfo.nodeIndex++;
-                continue;
-            } else {
-                break;
-            }
+            // 5.4) If found a match, break out of the loop; If no match, iterate to next sentence node
+            if (sentenceSplice !== null) break;
         }
 
         // 5.5) Fail if there were no matches in the rest of the sentence
