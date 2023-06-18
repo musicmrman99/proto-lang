@@ -705,22 +705,10 @@ export default class ProtoVisitor extends ProtoParserVisitor {
             // 3.4) Reorganise the sentence into the consumed part and the remaining part
             const [
                 initialSentenceFragment,
-                remainingSentenceFragment,
-                ,
-                remainingStart
+                remainingSentenceFragment
             ] = newInitSentenceFragments;
 
-            // 3.5) Determine next indexes (ie. the ones used in the first part of the binary fork)
-            let nextNodeIndex = sentenceInfo.nodeIndex;
-            let nextStrIndex = remainingStart;
-
-            // If we've reached the end of the fragment, start at the next node
-            if (remainingSentenceFragment.content === "") {
-                nextNodeIndex++;
-                nextStrIndex = 0;
-            }
-
-            // 3.6) Splice sentence into [fragment match (discarded), remaining nodes],
+            // 3.5) Splice sentence into [fragment match (discarded), remaining nodes],
             //      excluding the remaining fragment if it has no content
             const remainingNodes = [
                 ...(                                           // The part of the fragment after the template fragment match if not empty.
@@ -731,26 +719,14 @@ export default class ProtoVisitor extends ProtoParserVisitor {
                 ...sentence.slice(sentenceInfo.nodeIndex + 1)  // Plus every node after this fragment node
             ];
 
-            // 3.7) Fail if match is not at the first character
+            // 3.6) Fail if match is not at the first character
             if (initialSentenceFragment.content !== "") return matches; // Ie. return empty array
 
-            // 3.8) Base Case: Return sentence as it stands
+            // 3.7) Base Case: Return sentence as it stands
             const remainingNodesLength = remainingNodes.reduce((accum, node) => accum + node.length(), 0);
             if (remainingNodesLength === 0) return [[templateNode]];
 
-            // 3.9) Recursive Case: Binary fork (as described above)
-                // Continue checking for this fragment
-            matches.push(
-                ...this.getAllTemplateMatches(
-                    sentence, // Check the remaining sentence nodes
-                    template, // Keep looking for the same template fragment
-                    {         // Check from the beginning of the remaining sentence nodes
-                        nodeIndex: nextNodeIndex,
-                        strIndex: nextStrIndex
-                    }
-                )
-            );
-
+            // 3.8) Recursive Case: Unary fork (second fork of binary fork only, as first fork will never match anything else)
                 // Advance to next placeholder/fragment pair
             matches.push(
                 ...this.getAllTemplateMatches(
