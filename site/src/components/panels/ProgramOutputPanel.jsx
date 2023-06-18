@@ -2,7 +2,6 @@ import react from 'react';
 import './ProgramOutputPanel.css';
 
 import Panel from './Panel';
-
 import Message from '../utils/Message';
 import MessageList from '../utils/MessageList';
 

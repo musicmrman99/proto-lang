@@ -1,9 +1,8 @@
 import react from 'react';
 import './BuildLogPanel.css';
 
-import Message from '../utils/Message';
-
 import Panel from './Panel';
+import Message from '../utils/Message';
 import MessageList from '../utils/MessageList';
 
 export default class BuildLogPanel extends react.Component {
