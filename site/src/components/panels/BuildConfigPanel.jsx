@@ -2,7 +2,7 @@ import react from 'react';
 import './BuildConfigPanel.css';
 
 import jsonschema from 'json-schema';
-import { configSchema } from "../../lang/Config";
+import { configSchema } from "../../lang/config";
 
 import Panel from './Panel';
 import { Trees, insertAtPath, resolvePath } from '../../utils/trees';

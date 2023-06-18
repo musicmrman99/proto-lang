@@ -5,7 +5,7 @@ import Button from './utils/Button';
 import Separator from './utils/Separator';
 import { Tabs, Tab } from "./utils/Tabs";
 
-import commands from '../lang/Commands';
+import commands from '../lang/commands';
 
 export default class Toolbar extends react.Component {
   render() {
