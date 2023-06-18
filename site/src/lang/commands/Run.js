@@ -1,4 +1,4 @@
-import { repr, is } from "../Representations";
+import repr from "../reprs/all";
 import RuntimeError from "../errors/RuntimeError";
 
 const state = {
@@ -7,16 +7,16 @@ const state = {
 
 const evaluate = (astNode, context) => {
   // If a literal, create it's runtime representation
-  if (is.number(astNode))  return new repr.RuntimeNumber(astNode);
-  if (is.text(astNode))    return new repr.RuntimeText(astNode);
-  if (is.logical(astNode)) return new repr.RuntimeLogical(astNode);
+  if (repr.Repr.is(repr.Number, astNode))  return new repr.RuntimeNumber(astNode);
+  if (repr.Repr.is(repr.Text, astNode))    return new repr.RuntimeText(astNode);
+  if (repr.Repr.is(repr.Logical, astNode)) return new repr.RuntimeLogical(astNode);
 
-  if (is.map(astNode)) {
+  if (repr.Repr.is(repr.Map, astNode)) {
     // TODO
     return new repr.RuntimeMap(astNode, astNode.children.map((child) => evaluate(child, context)));
   }
 
-  if (is.block(astNode)) {
+  if (repr.Repr.is(repr.Block, astNode)) {
     const block = new repr.RuntimeBlock(astNode, context);
 
     if (context != null) { // If not the root of the stack
@@ -38,7 +38,7 @@ const evaluate = (astNode, context) => {
   }
 
   // If a parameter, get value from args
-  if (is.parameter(astNode)) {
+  if (repr.Repr.is(repr.Parameter, astNode)) {
     if (context.args.length < astNode.index) {
       throw new RuntimeError(
         `Parameter ${astNode.index} requested, `+
@@ -52,17 +52,17 @@ const evaluate = (astNode, context) => {
   }
 
   // If a declaration, evaluate its sentence and bind the resulting value
-  if (is.declaration(astNode)) {
+  if (repr.Repr.is(repr.Declaration, astNode)) {
     context.decls.set(astNode, evaluate(astNode.sentence, context));
     return null;
   }
 
   // If a sentence, get value from context declarations
-  if (is.sentence(astNode)) {
+  if (repr.Repr.is(repr.Sentence, astNode)) {
     let value = context.decls.get(astNode.decl);
 
     // If its value is a block, evaluate its arguments and run it
-    if (is.runtimeBlock(value)) {
+    if (repr.Repr.is(repr.RuntimeBlock, value)) {
       const args = astNode.params.map((param) => evaluate(param, context));
       value = runBlock(value, args);
     }
@@ -71,7 +71,7 @@ const evaluate = (astNode, context) => {
   }
 
   // If a `using` clause, get block from context declarations
-  if (is.using(astNode)) {
+  if (repr.Repr.is(repr.Using, astNode)) {
     let value = context.decls.get(astNode.decl);
 
     // If its value is a block, and not all of its arguments are placeholders,
@@ -84,13 +84,13 @@ const evaluate = (astNode, context) => {
     //   # Becomes:
     //   arg1 : {1} # Numbers in sentence templates are usually illegal
     //   { x @1 using arg1 }
-    if (is.runtimeBlock(value) && !astNode.params.every(is.placeholderOp)) {
+    if (repr.Repr.is(repr.RuntimeBlock, value) && !astNode.params.every(repr.Repr.is(repr.PlaceholderOperator))) {
       // Translate the arguments given into:
       let paramNum = 1;
       const tempContextASTDecls = [];
       const wrappedSentenceASTArgs = astNode.params.map((param) => {
         // A parameter for each non-bound argument
-        if (is.placeholderOp(param)) {
+        if (repr.Repr.is(repr.PlaceholderOperator, param)) {
           return new repr.Parameter(paramNum++, new repr.Map());
 
         // Another 'using' clause of a temporary declaration for each bound argument
@@ -133,7 +133,7 @@ const runBlock = (block, args) => {
 
   block.parent = state.stackHead;
   block.args = args;
-  block.decls = new repr.Repr.Mapping(is.declaration, is.repr);
+  block.decls = new repr.Repr.Mapping(repr.Repr.is(repr.Declaration), repr.Repr.is(repr.Repr));
   block.decls.mergeIn(block.encDecls);
 
   state.stackHead = block;

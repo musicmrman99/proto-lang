@@ -1,4 +1,5 @@
-import { repr, is, format } from "../Representations";
+import repr from '../reprs/all'
+import format from '../reprs/format';
 
 import antlr4 from 'antlr4';
 import ProtoLexer from '../antlr-parser/ProtoLexer.js';
@@ -112,7 +113,7 @@ class ProtoVisitor extends ProtoParserVisitor {
     parseBlock = (ctx) => {
         const parent = new repr.Block();
         parent.children = this.getNormalisedChildren(ctx);
-        parent.children.filter(is.nestable).forEach((child) => child.parent = parent);
+        parent.children.filter(repr.Repr.is(repr.Nestable)).forEach((child) => child.parent = parent);
         parent.decls = [];
         return parent;
     }
@@ -120,7 +121,7 @@ class ProtoVisitor extends ProtoParserVisitor {
     parseMap = (ctx) => {
         const parent = new repr.Map();
         parent.children = this.getNormalisedChildren(ctx);
-        parent.children.filter(is.nestable).forEach((child) => child.parent = parent);
+        parent.children.filter(repr.Repr.is(repr.Nestable)).forEach((child) => child.parent = parent);
         return parent;
     }
 
@@ -155,7 +156,7 @@ class ProtoVisitor extends ProtoParserVisitor {
 
         // Merge adjacent sentence fragments
         for (const child of children) {
-            if (is.sentenceFragment(child)) {
+            if (repr.Repr.is(repr.SentenceFragment, child)) {
                 mergedSentenceFragment.push(child);
             } else {
                 pushMergedSentenceFragment();
@@ -225,7 +226,7 @@ class ProtoVisitor extends ProtoParserVisitor {
         // - true if a declaration operator is allowed next.
         // - false if a declaration operator is not allowed next.
         // - a repr.Declaration if next complete sentence is the value of a decl.
-        let declTemplate = is.hasDeclarations(nestableNode);
+        let declTemplate = repr.Repr.is(repr.DeclarationContext, nestableNode);
 
         // Utility for the previous one. If it's not boolean, then it must be the
         // relevant Repr.
@@ -257,7 +258,7 @@ class ProtoVisitor extends ProtoParserVisitor {
             // If the sentence is incomplete, then return
             if (sentence == null) {
                 // If the sentence MUST be complate by this point, then error
-                if (is.hardTerminator(terminator)) {
+                if (repr.Repr.is(repr.HardTerminator, terminator)) {
                     this.log.success = false;
                     this.log.output.push(
                         new repr.Message("error", "Incomplete Sentence: " + format.nodeListToString(candidateNodes))
@@ -300,7 +301,7 @@ class ProtoVisitor extends ProtoParserVisitor {
 
             // Drop explicit terminators but keep implicit ones, as they may still
             // need parsing in the parent nestable node.
-            if (is.implicitTerminator(terminator)) finalChildren.push(terminator);
+            if (repr.Repr.is(repr.ImplicitTerminator, terminator)) finalChildren.push(terminator);
 
             // Keep parsing
             candidateNodes = [];
@@ -308,7 +309,7 @@ class ProtoVisitor extends ProtoParserVisitor {
 
         // Parse Children
         for (const child of nestableNode.children) {
-            if (is.declarationOp(child)) {
+            if (repr.Repr.is(repr.DeclarationOperator, child)) {
                 // Both 'defs not supported'/'multi-line template' (isImpossible())
                 // and 'decl in def' (isActual()) are invalid.
                 if (!isPossible(declTemplate)) {
@@ -316,7 +317,7 @@ class ProtoVisitor extends ProtoParserVisitor {
                     this.log.success = false;
 
                     // Error messages - be precise
-                    if (!is.hasDeclarations(nestableNode)) {
+                    if (!repr.Repr.is(repr.DeclarationContext, nestableNode)) {
                         this.log.output.push(
                             new repr.Message("error",
                                 "Declaration operator found outside of a block (at the end of " + format.nodeListToString(candidateNodes) + ")"
@@ -343,7 +344,7 @@ class ProtoVisitor extends ProtoParserVisitor {
                 }
 
                 // Templates consisting of only placeholders are invalid
-                if (!candidateNodes.some(is.sentenceFragment)) {
+                if (!candidateNodes.some(repr.Repr.is(repr.SentenceFragment))) {
                     this.log.success = false;
                     this.log.output.push(
                         new repr.Message("error",
@@ -355,7 +356,7 @@ class ProtoVisitor extends ProtoParserVisitor {
 
                 // Templates may only contain fragments and placeholders
                 else if (!candidateNodes.every(
-                    (node) => is.sentenceFragment(node) || is.placeholderOp(node)
+                    (node) => repr.Repr.is(repr.SentenceFragment, node) || repr.Repr.is(repr.PlaceholderOperator, node)
                 )) {
                     this.log.success = false;
                     this.log.output.push(
@@ -369,7 +370,7 @@ class ProtoVisitor extends ProtoParserVisitor {
                 declTemplate = candidateNodes;
                 candidateNodes = [];
 
-            } else if (is.terminator(child)) {
+            } else if (repr.Repr.is(repr.Terminator, child)) {
                 terminateSentence(child);
 
             } else {
@@ -397,7 +398,7 @@ class ProtoVisitor extends ProtoParserVisitor {
 
         // Recursive case
         const decls = [];
-        if (is.hasDeclarations(nestableNode)) {
+        if (repr.Repr.is(repr.DeclarationContext, nestableNode)) {
             decls.push(...nestableNode.decls); // If this nestable node has a namespace, add its decls (possibly hiding parent decls)
         }
         decls.push(...this.getDeclarations(nestableNode.parent)); // Add decls of all parent namespaces recursively.
@@ -425,26 +426,26 @@ class ProtoVisitor extends ProtoParserVisitor {
         //       of usage, because it's related to high-level processing of nodes.
 
         // Base case
-        if (is.nestable(node)) {
+        if (repr.Repr.is(repr.Nestable, node)) {
             let nestableNode = node;
             // A parameter has-a Map, not is-a Map, so special-case it
-            if (is.parameter(node)) nestableNode = node.extraction;
+            if (repr.Repr.is(repr.Parameter, node)) nestableNode = node.extraction;
 
             // If this nestable node creates a new namespace/scope, set it as the
             // new context, otherwise keep the current context.
-            const nestedContext = is.block(nestableNode) ? nestableNode : context;
+            const nestedContext = repr.Repr.is(repr.Block, nestableNode) ? nestableNode : context;
 
             // Recurse into the nested sentences
             this.parseSentences(nestedContext, nestableNode);
 
             // If the nestable node we're parsing is a Map, now we know
             // its final children we can parse their associations.
-            if (is.map(nestableNode)) this.parseAssociations(nestableNode);
+            if (repr.Repr.is(repr.Map, nestableNode)) this.parseAssociations(nestableNode);
 
             // If this nestable node creates a new namespace/scope, then cascade its
             // required enclosing declarations upwards to the current context,
             // excluding any declarations provided by the current context.
-            if (is.block(nestableNode)) {
+            if (repr.Repr.is(repr.Block, nestableNode)) {
                 context.reqEncDecls.push(
                     ...nestedContext.reqEncDecls
                     .filter((reqEncDecl) => !context.decls.includes(reqEncDecl))
@@ -452,7 +453,7 @@ class ProtoVisitor extends ProtoParserVisitor {
             }
         }
 
-        if (is.sentence(node)) {
+        if (repr.Repr.is(repr.Sentence, node)) {
             // Check if the sentence's declaration requires enclosure, and add it if so
             if (!context.decls.includes(node.decl) && !context.reqEncDecls.includes(node.decl)) {
                 context.reqEncDecls.push(node.decl);
@@ -484,10 +485,10 @@ class ProtoVisitor extends ProtoParserVisitor {
         let prevChild = null;
         let prevAssoc = null;
         for (const child of map.children) {
-            if (is.separatorOp(child)) {
+            if (repr.Repr.is(repr.SeparatorOperator, child)) {
                 prevChild = null;
 
-            } else if (is.associationOp(child)) {
+            } else if (repr.Repr.is(repr.AssociationOperator, child)) {
                 prevAssoc = child;
 
             } else { // A sentence/literal/parameter/etc.
@@ -532,7 +533,7 @@ class ProtoVisitor extends ProtoParserVisitor {
         log("Parse Sentence: " + format.nodeListToString(sentence));
 
         // 1) If it's a value (literal or parameter), return it directly (no sentence parsing).
-        if (sentence.length === 1 && is.value(sentence[0])) {
+        if (sentence.length === 1 && repr.Repr.is(repr.Value, sentence[0])) {
             return sentence[0];
         }
 
@@ -541,7 +542,7 @@ class ProtoVisitor extends ProtoParserVisitor {
         allDecls.forEach(decl => log(decl.toString()));
 
         // Check if it's a `using`
-        const isUsingClause = is.usingOp(sentence[0]);
+        const isUsingClause = repr.Repr.is(repr.UsingOperator, sentence[0]);
         const usingOperator = isUsingClause ? sentence[0] : null;
 
         // 2) Get a list of all possible matches of a sentence template (as an array of
@@ -609,11 +610,11 @@ class ProtoVisitor extends ProtoParserVisitor {
             if (node === null) {
                 return null;
 
-            } else if (is.argument(node)) {
+            } else if (repr.Repr.is(repr.Argument, node)) {
                 const isUnboundArg = (
                     acceptUnboundArgs &&
                     node.children.length === 1 &&
-                    is.placeholderOp(node.children[0])
+                    repr.Repr.is(repr.PlaceholderOperator, node.children[0])
                 );
 
                 const parsedArgument = isUnboundArg ?
@@ -693,9 +694,9 @@ class ProtoVisitor extends ProtoParserVisitor {
         // If template contains a fragment as the first (possibly only) node, then deal with it and slice it off
         // to align the remaining sentence to (placeholder, fragment) pairs. The last node being a placeholder
         // is dealt with in the next section.
-        if (is.sentenceFragment(templateNode)) {
+        if (repr.Repr.is(repr.SentenceFragment, templateNode)) {
             // 3.1) Fail if not a sentence fragment (as it cannot match the template fragment)
-            if (!is.sentenceFragment(sentenceNode)) return matches; // Ie. return empty array
+            if (!repr.Repr.is(repr.SentenceFragment, sentenceNode)) return matches; // Ie. return empty array
 
             // 3.2) Attempt to match the first template fragment
             const newInitSentenceFragments = this.spliceTemplateFragment(
@@ -785,7 +786,7 @@ class ProtoVisitor extends ProtoParserVisitor {
         const nextNode = () => {
             sentenceInfo.nodeIndex++;
             sentenceNode = sentence[sentenceInfo.nodeIndex]; // undefined if off the end of the sentence
-            sentenceInfo.strIndex = is.sentenceFragment(sentenceNode) ? 0 : null;
+            sentenceInfo.strIndex = repr.Repr.is(repr.SentenceFragment, sentenceNode) ? 0 : null;
         }
 
         // Try to match second node (fragment)
@@ -795,7 +796,7 @@ class ProtoVisitor extends ProtoParserVisitor {
         let sentenceSplice = null;
         for (; sentenceInfo.nodeIndex < sentence.length; nextNode()) {
             // 5.2) If the node cannot match the fragment, skip it.
-            if (!is.sentenceFragment(sentenceNode)) continue;
+            if (!repr.Repr.is(repr.SentenceFragment, sentenceNode)) continue;
 
             // 5.3) Attempt to match the next template fragment
             sentenceSplice = this.spliceTemplateFragment(
