@@ -13,8 +13,9 @@ export class Repr {
         get = (id) => this.index[id];
 
         set = (repr) => {
-            if (this.type != null && !this.type(repr)) {
-                throw new BuildError("Type error: Repr '"+repr.toString()+"' cannot be stored in this index");
+            if (repr == null || (this.type != null && !this.type(repr))) {
+                const reprStr = repr == null ? "NULL" : repr.toString();
+                throw new BuildError("Type error: Repr '"+reprStr+"' cannot be stored in this index");
             }
             this.index[repr.id] = repr;
         }
@@ -36,11 +37,13 @@ export class Repr {
         get = (keyRepr) => Repr.get(this.mapping[keyRepr.id]);
 
         set = (keyRepr, valueRepr) => {
-            if (this.keyType != null && !this.keyType(keyRepr)) {
-                throw new BuildError("Type error: Repr '"+keyRepr.toString()+"' cannot be stored as a key in this mapping");
+            if (keyRepr == null || (this.keyType != null && !this.keyType(keyRepr))) {
+                const keyReprStr = keyRepr == null ? "NULL" : keyRepr.toString();
+                throw new BuildError("Type error: Repr '"+keyReprStr+"' cannot be stored as a key in this mapping");
             }
-            if (this.valueType != null && !this.valueType(valueRepr)) {
-                throw new BuildError("Type error: Repr '"+valueRepr.toString()+"' cannot be stored as a value in this mapping");
+            if (valueRepr == null || (this.valueType != null && !this.valueType(valueRepr))) {
+                const valueReprStr = valueRepr == null ? "NULL" : valueRepr.toString();
+                throw new BuildError("Type error: Repr '"+valueReprStr+"' cannot be stored as a value in this mapping");
             }
             this.mapping[keyRepr.id] = valueRepr.id;
         }
