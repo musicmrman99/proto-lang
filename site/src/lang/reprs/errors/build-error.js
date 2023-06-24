@@ -1,0 +1,19 @@
+import { Repr } from "../abstract/repr";
+
+export class BuildError extends Repr {
+    // Note: Deliberately doesn't extend Error - this isn't a JS error, it's a Proto error
+
+    constructor(message) {
+        super()
+
+        this.message = message;
+        this.name = "BuildError";
+
+        // Use V8's native method if available, otherwise fallback
+        if ("captureStackTrace" in Error) {
+            Error.captureStackTrace(this, BuildError);
+        } else {
+            this.stack = (new Error()).stack;
+        }
+    }
+}

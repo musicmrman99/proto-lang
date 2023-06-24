@@ -1,9 +1,27 @@
 import { v4 as uuidv4 } from 'uuid';
-import BuildError from '../../errors/BuildError';
-
 import { isPredicate, predicate } from './predicate';
 
 export class Repr {
+    static Error = class extends Repr {
+        // Note: Deliberately doesn't extend Error - this isn't a JS error, it's a Proto error.
+        // Note: This is inside of Repr, unlike the other error types, as Repr and its Error type
+        //       are mutually dependent, and would otherwise cause an import cycle.
+
+        constructor(message) {
+            super()
+
+            this.message = message;
+            this.name = "ReprError";
+
+            // Use V8's native method if available, otherwise fallback
+            if ("captureStackTrace" in Error) {
+                Error.captureStackTrace(this, Repr.Error);
+            } else {
+                this.stack = (new Error()).stack;
+            }
+        }
+    }
+
     static Index = class {
         constructor(type) {
             this.index = {};
@@ -15,7 +33,7 @@ export class Repr {
         set = (repr) => {
             if (repr == null || (this.type != null && !this.type(repr))) {
                 const reprStr = repr == null ? "NULL" : repr.toString();
-                throw new BuildError("Type error: Repr '"+reprStr+"' cannot be stored in this index");
+                throw new Repr.Error("Type error: Repr '"+reprStr+"' cannot be stored in this index");
             }
             this.index[repr.id] = repr;
         }
@@ -39,11 +57,11 @@ export class Repr {
         set = (keyRepr, valueRepr) => {
             if (keyRepr == null || (this.keyType != null && !this.keyType(keyRepr))) {
                 const keyReprStr = keyRepr == null ? "NULL" : keyRepr.toString();
-                throw new BuildError("Type error: Repr '"+keyReprStr+"' cannot be stored as a key in this mapping");
+                throw new Repr.Error("Type error: Repr '"+keyReprStr+"' cannot be stored as a key in this mapping");
             }
             if (valueRepr == null || (this.valueType != null && !this.valueType(valueRepr))) {
                 const valueReprStr = valueRepr == null ? "NULL" : valueRepr.toString();
-                throw new BuildError("Type error: Repr '"+valueReprStr+"' cannot be stored as a value in this mapping");
+                throw new Repr.Error("Type error: Repr '"+valueReprStr+"' cannot be stored as a value in this mapping");
             }
             this.mapping[keyRepr.id] = valueRepr.id;
         }

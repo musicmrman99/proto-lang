@@ -981,15 +981,33 @@ const build = (buildConfig, protoSource) => {
   // Run 2nd phase parser / linker
   let ast = null;
   if (log.success) {
-    const protoLang = new ProtoVisitor(buildConfig, log);
-    ast = protoLang.visit(tree);
+    try {
+      // Build the program
+      const protoLang = new ProtoVisitor(buildConfig, log);
+      ast = protoLang.visit(tree);
+
+      // Show Result
+      log.output.push(new repr.Message("error", "Final AST:\n" + ast));
+
+    } catch (e) {
+      // Proto Error
+      if (e instanceof repr.BuildError || e instanceof repr.Repr.Error) {
+        log.success = false;
+        log.output.push(new repr.Message("error", "Build Error: " + e.message));
+
+      // Native Error (eg. stack overflow, out of memory, etc.)
+      } else {
+        log.success = false;
+        log.output.push(new repr.Message("error", "Native Error: " + e.message+"\n" + e.stack));
+      }
+    }
   }
 
   // Output success/failure
   if (log.success) {
-    log.output.push(new repr.Message("success", "Ready to Run"));
+    log.output.push(new repr.Message("success", "Ready to Run."));
   } else {
-    log.output.push(new repr.Message("error", "Errors Found (see above)"));
+    log.output.push(new repr.Message("error", "Build Failed."));
   }
 
   return [ast, log];

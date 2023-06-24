@@ -1,5 +1,4 @@
 import repr from "../reprs/all";
-import RuntimeError from "../errors/RuntimeError";
 
 const state = {
   stackHead: null
@@ -25,7 +24,7 @@ const evaluate = (astNode, context) => {
         if (value == null) {
           // Should never happen, as it should throw a build-time error,
           // but it may happen in the future if reflection is ever introduced.
-          throw new RuntimeError(
+          throw new repr.ComputeError(
             `Required enclosing declaration '${reqEncDecl.toString()}' not found in:\n`+
             block.getStackTraceStr()
           );
@@ -40,7 +39,7 @@ const evaluate = (astNode, context) => {
   // If a parameter, get value from args
   if (repr.Repr.is(repr.Parameter, astNode)) {
     if (context.args.length < astNode.index) {
-      throw new RuntimeError(
+      throw new repr.ComputeError(
         `Parameter ${astNode.index} requested, `+
         `but only ${context.args.length} arguments were given in:\n`+
         context.getStackTraceStr()
@@ -183,7 +182,7 @@ const run = (ast, programInput) => {
         [repr.RuntimeText.fromRaw(programInput)]
       );
 
-      log.output.push(new repr.Message("success", "I'm done."));
+      // Show Result
       if (result == null) {
         log.output.push(new repr.Message("info", "No result."));
       } else {
@@ -191,13 +190,24 @@ const run = (ast, programInput) => {
       }
 
     } catch (e) {
-      if (!(e instanceof RuntimeError)) throw e;
+      // Proto Error
+      if (e instanceof repr.ComputeError || e instanceof repr.Repr.Error) {
+        log.success = false;
+        log.output.push(new repr.Message("error", "Compute Error: " + e.message));
 
-      log.success = false;
-      log.output.push(
-        new repr.Message("error", "Runtime Error: " + e.message)
-      );
+      // Native Error (eg. stack overflow, out of memory, etc.)
+      } else {
+        log.success = false;
+        log.output.push(new repr.Message("error", "Native Error: " + e.message+"\n" + e.stack));
+      }
     }
+  }
+
+  // Output success/failure
+  if (log.success) {
+    log.output.push(new repr.Message("success", "I'm done."));
+  } else {
+    log.output.push(new repr.Message("error", "Compute Failed."));
   }
 
   return [result, log];

@@ -58,6 +58,9 @@ import {
     Terminator
 } from "./abstract/abstract";
 
+import { BuildError } from "./errors/build-error";
+import { ComputeError } from "./errors/compute-error";
+
 const repr = Object.freeze({
     // Base
     Repr,
@@ -86,7 +89,10 @@ const repr = Object.freeze({
     Logical,
 
     Map,
-    Block, Parameter,
+    Block,
+    Parameter,
+
+    BuildError,
 
     // Build-Time Abstract
     Literal,
@@ -107,6 +113,8 @@ const repr = Object.freeze({
     RuntimeText,
     RuntimeLogical,
     RuntimeMap,
-    RuntimeBlock
+    RuntimeBlock,
+
+    ComputeError
 });
 export default repr;
