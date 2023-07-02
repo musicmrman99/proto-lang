@@ -43,8 +43,7 @@ export class RuntimeNumber extends MapInterface {
         this.value = astNumber.value;
     }
 
-    // Fake an AST node
-    static fromRaw = (number) => new RuntimeNumber({value: +number});
+    static fromNative = (number) => new RuntimeNumber({value: +number});
 
     /* Map interface methods
     -------------------- */
@@ -65,8 +64,7 @@ export class RuntimeText extends MapInterface {
         this.value = astText.value;
     }
 
-    // Fake an AST node
-    static fromRaw = (string) => new RuntimeText({value: string.toString()});
+    static fromNative = (string) => new RuntimeText({value: string.toString()});
 
     /* Map interface methods
     -------------------- */
@@ -87,8 +85,7 @@ export class RuntimeLogical extends MapInterface {
         this.value = astLogical.value;
     }
 
-    // Fake an AST node
-    static fromRaw = (boolean) => new RuntimeNumber({value: !!boolean});
+    static fromNative = (boolean) => new RuntimeLogical({value: !!boolean});
 
     /* Map interface methods
     -------------------- */

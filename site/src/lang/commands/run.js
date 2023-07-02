@@ -179,7 +179,7 @@ const run = (ast, programInput) => {
       // Compute the root block (ie. run the program)
       result = runBlock(
         new repr.RuntimeBlock(ast),
-        [repr.RuntimeText.fromRaw(programInput)]
+        [repr.RuntimeText.fromNative(programInput)]
       );
 
       // Show Result
