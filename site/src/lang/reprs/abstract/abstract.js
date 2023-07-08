@@ -1,10 +1,13 @@
 import { Repr } from "./repr";
 import { predicate } from "./predicate";
 
-import { Number, Text, Logical } from "../basic/primitive";
-import { Map, AssociationOperator, SeparatorOperator } from "../basic/map";
-import { Block, Parameter } from "../basic/block";
+import { Number, Text, Logical, RuntimeNumber, RuntimeText, RuntimeLogical } from "../basic/primitive";
+import { Map, AssociationOperator, SeparatorOperator, RuntimeMap } from "../basic/map";
+import { Block, Parameter, ProtoRuntimeBlock, NativeBlock, NativeRuntimeBlock } from "../basic/block";
 import { ExplicitSoftTerminator, ExplicitHardTerminator } from "../basic/sentence";
+
+/* Build-Time Abstract
+-------------------- */
 
 /**
  * Type for nodes that represent literals.
@@ -16,9 +19,18 @@ export const Literal = predicate(
             Text,
             Logical,
             Map,
-            Block
+            Block,
+            NativeBlock
         ].includes(node.constructor)
     )
+);
+
+/**
+ * Type for runtime blocks.
+ */
+export const AbstractBlock = predicate((node) =>
+    Repr.is(Block, node) ||
+    Repr.is(NativeBlock, node)
 );
 
 /**
@@ -93,4 +105,31 @@ export const HardTerminator = predicate((node) =>
 export const Terminator = predicate((node) =>
     Repr.is(SoftTerminator, node) ||
     Repr.is(HardTerminator, node)
+);
+
+/* Run-Time Abstract
+-------------------- */
+
+/**
+ * Type for proto runtime values.
+ */
+export const RuntimeRepr = predicate(
+    (node) => node != null && (
+        [
+            RuntimeNumber,
+            RuntimeText,
+            RuntimeLogical,
+            RuntimeMap,
+            ProtoRuntimeBlock,
+            NativeRuntimeBlock
+        ].includes(node.constructor)
+    )
+);
+
+/**
+ * Type for runtime blocks.
+ */
+export const RuntimeBlock = predicate((node) =>
+    Repr.is(ProtoRuntimeBlock, node) ||
+    Repr.is(NativeRuntimeBlock, node)
 );

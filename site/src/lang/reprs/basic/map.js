@@ -1,5 +1,4 @@
 import { Repr } from "../abstract/repr";
-import { MapInterface } from "../abstract/map-interface";
 
 /* Build-Time Intermediate
 -------------------- */
@@ -47,7 +46,7 @@ export class Map extends Repr {
 /* Run-Time
 -------------------- */
 
-export class RuntimeMap extends MapInterface {
+export class RuntimeMap extends Repr {
     constructor(astMap, children) {
         super();
 

@@ -1,10 +1,21 @@
 import repr from "../reprs/all";
 
-const state = {
-  stackHead: null
-};
+const namespaceFrom = (stack, declarations) => {
+  const namespace = new repr.Repr.Mapping(repr.Repr.is(repr.Declaration), repr.Repr.is(repr.RuntimeRepr));
+  declarations.forEach((decl) => {
+    const value = stack.getDeclValue(decl);
+    if (value == null) {
+      throw new repr.ComputeError(
+        `Required enclosing declaration '${decl.toString()}' not found in:\n`+
+        stack.getTraceStr()
+      );
+    }
+    namespace.set(decl, value);
+  });
+  return namespace;
+}
 
-const evaluate = (astNode, context) => {
+const evaluate = (stack, astNode) => {
   // If a literal, create it's runtime representation
   if (repr.Repr.is(repr.Number, astNode))  return new repr.RuntimeNumber(astNode);
   if (repr.Repr.is(repr.Text, astNode))    return new repr.RuntimeText(astNode);
@@ -12,58 +23,46 @@ const evaluate = (astNode, context) => {
 
   if (repr.Repr.is(repr.Map, astNode)) {
     // TODO
-    return new repr.RuntimeMap(astNode, astNode.children.map((child) => evaluate(child, context)));
+    return new repr.RuntimeMap(astNode, astNode.children.map((child) => evaluate(stack, child)));
   }
 
-  if (repr.Repr.is(repr.Block, astNode)) {
-    const block = new repr.RuntimeBlock(astNode, context);
+  if (repr.Repr.is(repr.AbstractBlock, astNode)) {
+    const block = repr.Repr.is(repr.Block, astNode) ?
+      new repr.ProtoRuntimeBlock(astNode) :
+      new repr.NativeRuntimeBlock(astNode);
 
-    if (context != null) { // If not the root of the stack
-      astNode.reqEncDecls.forEach((reqEncDecl) => {
-        const value = context.getStackDeclValue(reqEncDecl);
-        if (value == null) {
-          // Should never happen, as it should throw a build-time error,
-          // but it may happen in the future if reflection is ever introduced.
-          throw new repr.ComputeError(
-            `Required enclosing declaration '${reqEncDecl.toString()}' not found in:\n`+
-            block.getStackTraceStr()
-          );
-        }
-        block.encDecls.set(reqEncDecl, value);
-      });
-    }
-
+    block.encDecls.mergeIn(namespaceFrom(stack, astNode.reqEncDecls));
     return block;
   }
 
   // If a parameter, get value from args
   if (repr.Repr.is(repr.Parameter, astNode)) {
-    if (context.args.length < astNode.index) {
+    if (stack.head.args.length < astNode.index) {
       throw new repr.ComputeError(
         `Parameter ${astNode.index} requested, `+
-        `but only ${context.args.length} arguments were given in:\n`+
-        context.getStackTraceStr()
+        `but only ${stack.head.args.length} arguments were given in:\n`+
+        stack.getTraceStr()
       );
     }
 
     // TODO: This is where the extraction/windowing/typechecking algo would be run
-    return context.args[astNode.index - 1];
+    return stack.head.args[astNode.index - 1];
   }
 
   // If a declaration, evaluate its sentence and bind the resulting value
   if (repr.Repr.is(repr.Declaration, astNode)) {
-    context.decls.set(astNode, evaluate(astNode.sentence, context));
+    stack.head.decls.set(astNode, evaluate(stack, astNode.sentence));
     return null;
   }
 
   // If a sentence, get value from context declarations
   if (repr.Repr.is(repr.Sentence, astNode)) {
-    let value = context.decls.get(astNode.decl);
+    let value = stack.head.decls.get(astNode.decl);
 
     // If its value is a block, evaluate its arguments and run it
     if (repr.Repr.is(repr.RuntimeBlock, value)) {
-      const args = astNode.params.map((param) => evaluate(param, context));
-      value = runBlock(value, args);
+      const args = astNode.params.map((param) => evaluate(stack, param));
+      value = runBlock(stack, value, args);
     }
 
     return value;
@@ -71,7 +70,7 @@ const evaluate = (astNode, context) => {
 
   // If a `using` clause, get block from context declarations
   if (repr.Repr.is(repr.Using, astNode)) {
-    let value = context.decls.get(astNode.decl);
+    let value = stack.head.decls.get(astNode.decl);
 
     // If its value is a block, and not all of its arguments are placeholders,
     // then evaluate its arguments and construct a block that runs it.
@@ -107,44 +106,51 @@ const evaluate = (astNode, context) => {
 
       // Create a `using` block that must enclose over those temporary declarations
       const block = new repr.Block();
-      block.parent = context.astNode;
+      block.parent = stack.head.astNode;
       block.children.push(new repr.Sentence(astNode.decl, wrappedSentenceASTArgs));
       block.reqEncDecls.push(astNode.decl, ...tempContextASTDecls);
       // A `using` block has no declarations
 
       // The computed value of the `using` clause is the evaluation of the `using`
       // block in a temporarily modified context.
-      const oldDecls = context.decls;
+      const oldDecls = stack.head.decls;
       tempContextASTDecls.forEach(
-        (tempContextASTDecl) => evaluate(tempContextASTDecl, context)
+        (tempContextASTDecl) => evaluate(stack, tempContextASTDecl)
       );
-      value = evaluate(block, context);
-      context.decls = oldDecls;
+      value = evaluate(stack, block);
+      stack.head.decls = oldDecls;
     }
 
     return value;
   }
 }
 
-const runBlock = (block, args) => {
+const runBlock = (stack, block, args) => {
   // Setup
   let ret = null;
 
-  block.parent = state.stackHead;
+  block.parent = stack.head;
   block.args = args;
-  block.decls = new repr.Repr.Mapping(repr.Repr.is(repr.Declaration), repr.Repr.is(repr.Repr));
+  block.decls = new repr.Repr.Mapping(repr.Repr.is(repr.Declaration), repr.Repr.is(repr.RuntimeRepr));
   block.decls.mergeIn(block.encDecls);
 
-  state.stackHead = block;
+  stack.head = block;
 
-  // Evaluate each child of block
-  for (const node of block.astBlock.children) {
-    const value = evaluate(node, state.stackHead);
-    if (value != null) ret = value;
+  if (repr.Repr.is(repr.ProtoRuntimeBlock, block)) {
+    // Evaluate each child of block
+    for (const node of block.astBlock.children) {
+      const value = evaluate(stack, node);
+      if (value != null) ret = value;
+    }
+  }
+
+  if (repr.Repr.is(repr.NativeRuntimeBlock, block)) {
+    // Evaluate function of native block, passing the stack and itself
+    ret = block.astNativeBlock.function_(stack, block);
   }
 
   // Teardown
-  state.stackHead = state.stackHead.parent;
+  stack.head = stack.head.parent;
 
   block.parent = null;
   block.args = null;
@@ -173,13 +179,15 @@ const run = (ast, programInput) => {
     log.output.push(new repr.Message("error", "Cannot run program until it is successfully built"));
   }
 
+  const stack = new repr.Stack();
   let result = null;
   if (log.success) {
     try {
       // Compute the root block (ie. run the program)
       result = runBlock(
-        new repr.RuntimeBlock(ast),
-        [repr.RuntimeText.fromRaw(programInput)]
+        stack,
+        new repr.ProtoRuntimeBlock(ast),
+        [repr.RuntimeText.fromNative(programInput)]
       );
 
       // Show Result
