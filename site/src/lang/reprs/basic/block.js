@@ -1,8 +1,8 @@
 import { Repr } from "../abstract/repr";
-import { MapInterface } from "../abstract/map-interface";
 
-import { Sentence } from "./sentence";
-import { Declaration } from "./declaration";
+import { RuntimeRepr } from "../abstract/abstract";
+import { SentenceFragment, Sentence } from "./sentence";
+import { PlaceholderOperator, Declaration } from "./declaration";
 
 /* Build-Time Final
 -------------------- */
@@ -26,6 +26,25 @@ export class Block extends Repr {
     };
 }
 
+export class NativeBlock extends Repr {
+    constructor() {
+        super();
+        this.function_ = () => {};
+        this.docs = "An empty block";
+        this.reqEncDecls = [];
+    }
+
+    length = () => 1; // Non-empty, but not relative to its source code
+    toString = () => {
+        const docsMaxLen = 30;
+        return `{ NATIVE BLOCK "${
+            this.docs.length > docsMaxLen ?
+                this.docs.slice(0, docsMaxLen - 3)+"..." :
+                this.docs
+        }" }`;
+    };
+}
+
 export class Parameter extends Repr {
     constructor(index, extraction) {
         super();
@@ -40,73 +59,18 @@ export class Parameter extends Repr {
 /* Run-Time
 -------------------- */
 
-export class RuntimeBlock extends MapInterface {
+export class ProtoRuntimeBlock extends Repr {
     constructor(astBlock) {
         super();
 
         // Known when the block is created
         this.astBlock = astBlock;
-        this.encDecls = new Repr.Mapping(Repr.is(Declaration), Repr.is(Repr));
+        this.encDecls = new Repr.Mapping(Repr.is(Declaration), Repr.is(RuntimeRepr));
 
         // Not known until the block is run (possibly more than once)
         this.parent = null;
         this.args = null;
         this.decls = null;
-    }
-
-    /* Block methods
-    -------------------- */
-
-    /**
-     * Return the value of the given declaration in all blocks above this block on
-     * the stack.
-     * 
-     * This function is only useful while the block is running (ie. on the stack).
-     * 
-     * It is most commonly used to get the value of a required enclosing declaration
-     * in the context of the creating block (on the stack) when creating a new runtime
-     * block (which won't yet be on the stack).
-     * 
-     * @param {Declaration} decl The declaration to get the value in this block for.
-     * @returns The value of the given declaration in this block.
-     */
-    getStackDeclValue = (decl) => {
-        // Base case - search this block's decls, return if found
-        const value = this.decls.get(decl);
-        if (value != null) return value;
-
-        // Base-case - root block or not running, so nothing left to search
-        if (this.parent == null) return null;
-
-        // Recursive case - check parent
-        return this.parent.getStackDeclValue(decl);
-    }
-
-    /**
-     * Return the stack trace of this block as an array of runtime blocks.
-     * 
-     * This will only contain this block if it's not on the stack.
-     * 
-     * @returns The stack trace of this block.
-     */
-    getStackTrace = () => {
-        return [
-            this,
-            ...(this.parent != null ? this.parent.getStackTrace() : [])
-        ];
-    }
-
-    /**
-     * Return the stack trace of this block as a string.
-     * 
-     * This will only contain this block if it's not on the stack.
-     * 
-     * @returns The stack trace of this block as a string.
-     */
-    getStackTraceStr = () => {
-        return this.getStackTrace()
-            .map((runtimeBlock) => "-> "+runtimeBlock.astBlock.toString())
-            .join("\n");
     }
 
     /* Map interface methods
@@ -119,5 +83,51 @@ export class RuntimeBlock extends MapInterface {
 
     toString = () => {
         return `{ BLOCK { decls: ${this.decls} } from ${this.astBlock.toString()} }`;
+    };
+}
+
+/* Run-Time (Unavailable From Parser/Runtime)
+-------------------- */
+
+export class NativeRuntimeBlock extends Repr {
+    constructor(astNativeBlock) {
+        super();
+
+        // Known when the block is created
+        this.astNativeBlock = astNativeBlock;
+        this.encDecls = new Repr.Mapping(Repr.is(Declaration), Repr.is(RuntimeRepr));
+
+        // Not known until the block is run (possibly more than once)
+        this.parent = null;
+        this.args = null;
+        this.decls = null;
+    }
+
+    /* Helpers for other representation types
+    -------------------- */
+
+    nativeTemplate() {
+        return [
+            "__"+this.function_.name+"(",
+            ...(
+                new Array(this.function_.length)
+                .fill()
+                .flatMap(() => [new PlaceholderOperator(), new SentenceFragment(", ")])
+                .slice(0, -1)
+            ),
+            ")"
+        ];
+    }
+
+    /* Map interface methods
+    -------------------- */
+
+    //
+
+    /* Utility methods
+    -------------------- */
+
+    toString = () => {
+        return `{ NATIVE BLOCK { decls: ${this.decls} } from ${this.astNativeBlock.toString()} }`;
     };
 }

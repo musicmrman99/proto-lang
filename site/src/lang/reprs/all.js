@@ -2,6 +2,11 @@ import { Repr } from "./abstract/repr";
 import { Message } from "./general/message";
 
 import {
+    LineComment,
+    BlockComment
+} from './basic/comment'
+
+import {
     SentenceFragment,
     ExplicitSoftTerminator,
     ExplicitHardTerminator,
@@ -32,7 +37,9 @@ import {
 import {
     Block,
     Parameter,
-    RuntimeBlock
+    ProtoRuntimeBlock,
+    NativeBlock,
+    NativeRuntimeBlock
 } from "./basic/block";
 
 import {
@@ -43,10 +50,7 @@ import {
 } from "./basic/map";
 
 import {
-    MapInterface
-} from "./abstract/map-interface";
-
-import {
+    AbstractBlock,
     Literal,
     Value,
     Nestable,
@@ -55,8 +59,12 @@ import {
     ImplicitTerminator,
     SoftTerminator,
     HardTerminator,
-    Terminator
+    Terminator,
+    RuntimeRepr,
+    RuntimeBlock
 } from "./abstract/abstract";
+
+import { Stack } from "./basic/stack";
 
 import { BuildError } from "./errors/build-error";
 import { ComputeError } from "./errors/compute-error";
@@ -87,14 +95,19 @@ const repr = Object.freeze({
     Number,
     Text,
     Logical,
-
     Map,
     Block,
     Parameter,
 
     BuildError,
 
+    // Build-Time Final (Unavailable From Parser/Runtime)
+    LineComment,
+    BlockComment,
+    NativeBlock,
+
     // Build-Time Abstract
+    AbstractBlock,
     Literal,
     Value,
     Nestable,
@@ -107,14 +120,21 @@ const repr = Object.freeze({
     Terminator,
 
     // Run-Time
-    MapInterface,
-
     RuntimeNumber,
     RuntimeText,
     RuntimeLogical,
     RuntimeMap,
-    RuntimeBlock,
+    ProtoRuntimeBlock,
 
-    ComputeError
+    Stack,
+
+    ComputeError,
+
+    // Run-Time (Unavailable From Parser/Runtime)
+    NativeRuntimeBlock,
+
+    // Run-Time Abstract
+    RuntimeRepr,
+    RuntimeBlock
 });
 export default repr;

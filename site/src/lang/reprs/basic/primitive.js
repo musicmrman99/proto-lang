@@ -1,5 +1,4 @@
 import { Repr } from "../abstract/repr";
-import { MapInterface } from "../abstract/map-interface";
 
 /* Build-Time Final
 -------------------- */
@@ -37,7 +36,7 @@ export class Logical extends Repr {
 /* Run-Time
 -------------------- */
 
-export class RuntimeNumber extends MapInterface {
+export class RuntimeNumber extends Repr {
     constructor(astNumber) {
         super();
         this.value = astNumber.value;
@@ -58,7 +57,7 @@ export class RuntimeNumber extends MapInterface {
     };
 }
 
-export class RuntimeText extends MapInterface {
+export class RuntimeText extends Repr {
     constructor(astText) {
         super();
         this.value = astText.value;
@@ -79,7 +78,7 @@ export class RuntimeText extends MapInterface {
     };
 }
 
-export class RuntimeLogical extends MapInterface {
+export class RuntimeLogical extends Repr {
     constructor(astLogical) {
         super();
         this.value = astLogical.value;
