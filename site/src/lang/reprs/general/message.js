@@ -1,9 +1,9 @@
-import { v4 as uuidv4 } from 'uuid';
+import { Repr } from "../abstract/repr";
 
-export default class Message {
+export class Message extends Repr {
     constructor(type, content) {
+        super();
         this.type = type;
         this.content = content;
-        this.id = uuidv4();
     }
 }

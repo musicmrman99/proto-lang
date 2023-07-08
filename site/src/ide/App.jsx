@@ -1,7 +1,7 @@
 import react from 'react';
 import './App.css';
 
-import { configDefault } from '../core/Config';
+import { configDefault } from '../lang/config';
 
 import Toolbar from './Toolbar';
 import LanguageSpace from './LanguageSpace';
@@ -60,8 +60,8 @@ export default class App extends react.Component {
               ast={this.state.ast}
               programInput={this.state.programInput}
 
-              onBuild={(ast, buildLog) => this.setState({ast: ast, buildLog: buildLog})}
-              onRun={(programOutput) => this.setState({programOutput: programOutput})}
+              onBuild={(ast, log) => this.setState({ast: ast, buildLog: log})}
+              onRun={(result, log) => this.setState({programOutput: log.output})}
             />
           </header>
 
