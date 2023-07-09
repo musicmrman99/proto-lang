@@ -987,7 +987,7 @@ const build = (buildConfig, protoSource) => {
       ast = protoLang.visit(tree);
 
       // Show Result
-      log.output.push(new repr.Message("error", "Final AST:\n" + ast));
+      log.output.push(new repr.Message("info", "Final AST:\n" + ast));
 
     } catch (e) {
       // Proto Error
