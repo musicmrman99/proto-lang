@@ -17,8 +17,14 @@ const pipeline = (state) => state == null ? pipeline({}) : ({
     },
     verifyAst: (targetAst) => {
         if (typeof targetAst === 'function') targetAst = targetAst(state);
+
         expect(state.success).toBe(true);
-        expect(state.ast).toMatchObject(targetAst);
+        if (state.ast !== Object(state.ast)) {
+            expect(state.ast).toBe(targetAst);
+        } else {
+            expect(state.ast).toMatchObject(targetAst);
+        }
+
         return pipeline(Object.assign({}, state, {
             targetAst: targetAst
         }));
@@ -39,8 +45,14 @@ const pipeline = (state) => state == null ? pipeline({}) : ({
     },
     verifyResult: (targetResult) => {
         if (typeof targetResult === 'function') targetResult = targetResult(state);
+
         expect(state.success).toBe(true);
-        expect(state.result).toMatchObject(targetResult);
+        if (state.result !== Object(state.result)) {
+            expect(state.result).toBe(targetResult);
+        } else {
+            expect(state.result).toMatchObject(targetResult);
+        }
+
         return pipeline(Object.assign({}, state, {
             targetResult: targetResult
         }));
