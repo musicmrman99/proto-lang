@@ -12,8 +12,8 @@ it('creates the number zero', () => pipeline()
         mock.repr.ast.block([mock.repr.ast.number(0).with(defaultMods)], [], []).with(defaultMods)
     )
     .run()
-    .verifyResult(({targetAst}) =>
-        mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
+    .verifyResult(
+        mock.repr.runtime.number(0).with(defaultMods)
     )
     .pass()
 );
@@ -24,8 +24,8 @@ it('creates an integer number', () => pipeline()
         mock.repr.ast.block([mock.repr.ast.number(1563).with(defaultMods)], [], []).with(defaultMods)
     )
     .run()
-    .verifyResult(({targetAst}) =>
-        mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
+    .verifyResult(
+        mock.repr.runtime.number(1563).with(defaultMods)
     )
     .pass()
 );
@@ -36,8 +36,8 @@ it('creates a real number (1dp)', () => pipeline()
         mock.repr.ast.block([mock.repr.ast.number(156.3).with(defaultMods)], [], []).with(defaultMods)
     )
     .run()
-    .verifyResult(({targetAst}) =>
-        mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
+    .verifyResult(
+        mock.repr.runtime.number(156.3).with(defaultMods)
     )
     .pass()
 );
@@ -48,8 +48,8 @@ it('creates a real number (>1dp)', () => pipeline()
         mock.repr.ast.block([mock.repr.ast.number(156.3623).with(defaultMods)], [], []).with(defaultMods)
     )
     .run()
-    .verifyResult(({targetAst}) =>
-        mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
+    .verifyResult(
+        mock.repr.runtime.number(156.3623).with(defaultMods)
     )
     .pass()
 );

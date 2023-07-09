@@ -7,25 +7,25 @@ const defaultMods = [
 ];
 
 it('creates some empty text', () => pipeline()
-    .build(mock.proto.code("\"\""))
+    .build(mock.proto.code('""'))
     .verifyAst(
         mock.repr.ast.block([mock.repr.ast.text("").with(defaultMods)], [], []).with(defaultMods)
     )
     .run()
-    .verifyResult(({targetAst}) =>
-        mock.repr.runtime.text(targetAst.children[0]).with(defaultMods)
+    .verifyResult(
+        mock.repr.runtime.text("").with(defaultMods)
     )
     .pass()
 );
 
 it('creates some non-empty text', () => pipeline()
-    .build(mock.proto.code("\"hello\""))
+    .build(mock.proto.code('"hello"'))
     .verifyAst(
         mock.repr.ast.block([mock.repr.ast.text("hello").with(defaultMods)], [], []).with(defaultMods)
     )
     .run()
-    .verifyResult(({targetAst}) =>
-        mock.repr.runtime.text(targetAst.children[0]).with(defaultMods)
+    .verifyResult(
+        mock.repr.runtime.text("hello").with(defaultMods)
     )
     .pass()
 );

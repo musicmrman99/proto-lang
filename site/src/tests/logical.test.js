@@ -12,8 +12,8 @@ it("creates a logical 'true' value", () => pipeline()
         mock.repr.ast.block([mock.repr.ast.logical(true).with(defaultMods)], [], []).with(defaultMods)
     )
     .run()
-    .verifyResult(({targetAst}) =>
-        mock.repr.runtime.logical(targetAst.children[0]).with(defaultMods)
+    .verifyResult(
+        mock.repr.runtime.logical(true).with(defaultMods)
     )
     .pass()
 );
@@ -24,8 +24,8 @@ it("creates a logical 'false' value", () => pipeline()
         mock.repr.ast.block([mock.repr.ast.logical(false).with(defaultMods)], [], []).with(defaultMods)
     )
     .run()
-    .verifyResult(({targetAst}) =>
-        mock.repr.runtime.logical(targetAst.children[0]).with(defaultMods)
+    .verifyResult(
+        mock.repr.runtime.logical(false).with(defaultMods)
     )
     .pass()
 );

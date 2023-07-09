@@ -118,17 +118,17 @@ const mock = Object.freeze({
         }),
 
         runtime: {
-            number: (astNumber) => {
-                requireMockArg("RuntimeNumber", "astNumber", astNumber);
-                return mock.repr.modifiers.wrap(new repr.RuntimeNumber(astNumber));
+            number: (number) => {
+                requireMockArg("RuntimeNumber", "number", number);
+                return mock.repr.modifiers.wrap(new repr.RuntimeNumber(new repr.Number(number)));
             },
-            text: (astText) => {
-                requireMockArg("RuntimeText", "astText", astText);
-                return mock.repr.modifiers.wrap(new repr.RuntimeText(astText));
+            text: (text) => {
+                requireMockArg("RuntimeText", "text", text);
+                return mock.repr.modifiers.wrap(new repr.RuntimeText(new repr.Text(text)));
             },
-            logical: (astLogical) => {
-                requireMockArg("RuntimeLogical", "astLogical", astLogical);
-                return mock.repr.modifiers.wrap(new repr.RuntimeLogical(astLogical));
+            logical: (logical) => {
+                requireMockArg("RuntimeLogical", "logical", logical);
+                return mock.repr.modifiers.wrap(new repr.RuntimeLogical(new repr.Logical(logical)));
             }
         }
     })
