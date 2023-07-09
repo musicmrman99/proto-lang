@@ -15,7 +15,7 @@ it('creates some empty text', () => pipeline()
     .verifyResult(({targetAst}) =>
         mock.repr.runtime.text(targetAst.children[0]).with(defaultMods)
     )
-    .success()
+    .pass()
 );
 
 it('creates some non-empty text', () => pipeline()
@@ -27,7 +27,7 @@ it('creates some non-empty text', () => pipeline()
     .verifyResult(({targetAst}) =>
         mock.repr.runtime.text(targetAst.children[0]).with(defaultMods)
     )
-    .success()
+    .pass()
 );
 
 /*

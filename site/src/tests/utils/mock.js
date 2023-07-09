@@ -38,17 +38,13 @@ const mock = Object.freeze({
             requireCommandArg("build", "config", config);
             requireCommandArg("build", "code", code);
 
-            const result = commands.build(config, code);
-            expect(result[1].success).toBe(true);
-            return result[0];
+            return commands.build(config, code);
         },
         run: (ast, input) => {
             requireCommandArg("build", "ast", ast);
             requireCommandArg("build", "input", input);
 
-            const result = commands.run(ast, input);
-            expect(result[1].success).toBe(true);
-            return result[0];
+            return commands.run(ast, input);
         }
     }),
 
@@ -124,21 +120,15 @@ const mock = Object.freeze({
         runtime: {
             number: (astNumber) => {
                 requireMockArg("RuntimeNumber", "astNumber", astNumber);
-                return mock.repr.modifiers.wrap(
-                    new repr.RuntimeNumber(astNumber)
-                );
+                return mock.repr.modifiers.wrap(new repr.RuntimeNumber(astNumber));
             },
             text: (astText) => {
                 requireMockArg("RuntimeText", "astText", astText);
-                return mock.repr.modifiers.wrap(
-                    new repr.RuntimeText(astText)
-                );
+                return mock.repr.modifiers.wrap(new repr.RuntimeText(astText));
             },
             logical: (astLogical) => {
                 requireMockArg("RuntimeLogical", "astLogical", astLogical);
-                return mock.repr.modifiers.wrap(
-                    new repr.RuntimeLogical(astLogical)
-                );
+                return mock.repr.modifiers.wrap(new repr.RuntimeLogical(astLogical));
             }
         }
     })

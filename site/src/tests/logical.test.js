@@ -15,7 +15,7 @@ it("creates a logical 'true' value", () => pipeline()
     .verifyResult(({targetAst}) =>
         mock.repr.runtime.logical(targetAst.children[0]).with(defaultMods)
     )
-    .success()
+    .pass()
 );
 
 it("creates a logical 'false' value", () => pipeline()
@@ -27,5 +27,5 @@ it("creates a logical 'false' value", () => pipeline()
     .verifyResult(({targetAst}) =>
         mock.repr.runtime.logical(targetAst.children[0]).with(defaultMods)
     )
-    .success()
+    .pass()
 );

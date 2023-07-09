@@ -15,7 +15,7 @@ it('creates the number zero', () => pipeline()
     .verifyResult(({targetAst}) =>
         mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
     )
-    .success()
+    .pass()
 );
 
 it('creates an integer number', () => pipeline()
@@ -27,7 +27,7 @@ it('creates an integer number', () => pipeline()
     .verifyResult(({targetAst}) =>
         mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
     )
-    .success()
+    .pass()
 );
 
 it('creates a real number (1dp)', () => pipeline()
@@ -39,7 +39,7 @@ it('creates a real number (1dp)', () => pipeline()
     .verifyResult(({targetAst}) =>
         mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
     )
-    .success()
+    .pass()
 );
 
 it('creates a real number (>1dp)', () => pipeline()
@@ -51,7 +51,7 @@ it('creates a real number (>1dp)', () => pipeline()
     .verifyResult(({targetAst}) =>
         mock.repr.runtime.number(targetAst.children[0]).with(defaultMods)
     )
-    .success()
+    .pass()
 );
 
 /*
