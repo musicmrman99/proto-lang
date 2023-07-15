@@ -32,6 +32,7 @@ const tests = {
         ],
 
         'scope': [
+            // Integration: number
             ['has no effect before the comment character', ['1#'],     oneAst, one],
             ['has no effect after the end of the line',    ['#', '1'], oneAst, one]
         ],
@@ -102,6 +103,7 @@ const tests = {
         ],
 
         'scope': [
+            // Integration: number
             ['has no effect before the comment',             ['1#{}#'],     oneAst, one],
             ['has no effect after the comment',              ['#{}#1'],     oneAst, one],
             ['has no effect on the line before the comment', ['1', '#{}#'], oneAst, one],
@@ -122,6 +124,10 @@ const tests = {
                 ['ignores block literals in a line comment',          ['#{ hi {5}, we like you }#'],      nullAst, null]
             ]
         }
+
+        // TODO: Spacing of block comments. These will require either negative tests, or integration with declarations
+        //       to know how many spaces were meaningful, and how many were ignored. This will also interact with space
+        //       squashing.
     }
 };
 
