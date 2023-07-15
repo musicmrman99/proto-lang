@@ -1,7 +1,7 @@
 import mock from "./utils/mock";
 import pipeline from "./utils/pipeline";
 
-it('creates the number zero', () => pipeline()
+it('fails when it has no code to build', () => pipeline()
     .build(mock.proto.code(""))
     .verifyFailed()
     .pass()
