@@ -4,11 +4,13 @@ import MockError from "./mock-error";
 export const BUILD_ERROR = Symbol('BUILD_ERROR');
 export const COMPUTE_ERROR = Symbol('COMPUTE_ERROR');
 
-export const pipeline = (state) => state == null ? pipeline({}) : ({
+export const pipeline = (state) => state == null ? pipeline({
+    success: true
+}) : ({
     // Build
-    withConfig: (config) => pipeline(Object.assign({}, state, {
-        config: config
-    })),
+    withConfig: (config) => {
+        return pipeline(Object.assign({}, state, {config: config}))
+    },
     build: (code) => {
         const config = mock.proto.config(state.config);
         const [ast, log] = mock.command.build(config, code);
@@ -40,10 +42,16 @@ export const pipeline = (state) => state == null ? pipeline({}) : ({
     },
 
     // Run
-    withInput: (input) => pipeline(Object.assign({}, state, {
-        input: input
-    })),
+    withInput: (input) => {
+        // Job Dependencies
+        if (state.ast == null) return pipeline(state);
+
+        return pipeline(Object.assign({}, state, {input: input}))
+    },
     run: () => {
+        // Job Dependencies
+        if (state.ast == null) return pipeline(state);
+
         const input = state.input != null ? state.input : "";
         const [result, log] = mock.command.run(state.ast, input);
         return pipeline(Object.assign({}, state, {
@@ -53,6 +61,9 @@ export const pipeline = (state) => state == null ? pipeline({}) : ({
         }))
     },
     verifyRun: (targetResult) => {
+        // Job Dependencies
+        if (state.ast == null) return pipeline(state);
+
         if (typeof targetResult === 'function') targetResult = targetResult(state);
 
         if (Object.is(targetResult, COMPUTE_ERROR)) {

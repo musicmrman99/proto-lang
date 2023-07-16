@@ -1,19 +1,6 @@
 import mock from "./utils/mock";
-import { BUILD_ERROR, pipeline } from "./utils/pipeline";
-
-import isObject from "../utils/is-object";
-
-function flattenTests(tests, context='') {
-    if (isObject(tests)) {
-        return Object.entries(tests).flatMap(
-            ([groupName, groupContent]) => flattenTests(groupContent, context+groupName+' / ')
-        );
-    } else {
-        return tests.map(
-            ([testName, ...testArgs]) => [context+testName, ...testArgs]
-        );
-    }
-}
+import { BUILD_ERROR } from "./utils/pipeline";
+import { runTestGroup } from "./utils/group";
 
 const defaultMods = [
     mock.repr.modifiers.noIdentity,
@@ -24,7 +11,7 @@ const nullAst = mock.repr.ast.block([], [], []).with(defaultMods);
 const oneAst = mock.repr.ast.block([mock.repr.runtime.number(1).with(defaultMods)], [], []).with(defaultMods);
 const one = mock.repr.runtime.number(1).with(defaultMods);
 
-const tests = {
+runTestGroup({
     'line comment': {
         'basics': [
             ['works at all',     ["#"],   nullAst, null],
@@ -113,7 +100,9 @@ const tests = {
         ],
 
         'allowed content': {
-            // Recursive parse is a negative test - see below
+            'recursive parse': [
+                ['ignores open-block-comment tokens inside of block comments', ['#{#{}#}#'], BUILD_ERROR]
+            ],
 
             'literals': [
                 ['ignores number literals in a line comment',         ['#{ hi 5, we like you }#'],        nullAst, null],
@@ -129,21 +118,4 @@ const tests = {
         //       to know how many spaces were meaningful, and how many were ignored. This will also interact with space
         //       squashing.
     }
-};
-
-it.each(flattenTests(tests))('%s', (_, code, expectedAst, expectedValue) => pipeline()
-    .build(mock.proto.code(...code))
-    .verifyBuild(expectedAst)
-    .run()
-    .verifyRun(expectedValue)
-    .pass()
-);
-
-/* Negative tests
--------------------- */
-
-it('ignores open-block-comment tokens inside of block comments', () => pipeline()
-    .build(mock.proto.code('#{#{}#}#'))
-    .verifyBuild(BUILD_ERROR)
-    .pass()
-);
+});

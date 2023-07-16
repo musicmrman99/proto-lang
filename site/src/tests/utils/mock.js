@@ -41,8 +41,8 @@ const mock = Object.freeze({
             return commands.build(config, code);
         },
         run: (ast, input) => {
-            requireCommandArg("build", "ast", ast);
-            requireCommandArg("build", "input", input);
+            requireCommandArg("run", "ast", ast);
+            requireCommandArg("run", "input", input);
 
             return commands.run(ast, input);
         }
