@@ -8,7 +8,7 @@ const defaultMods = [
 ];
 
 const nullAst = mock.repr.ast.block([], [], []).with(defaultMods);
-const oneAst = mock.repr.ast.block([mock.repr.runtime.number(1).with(defaultMods)], [], []).with(defaultMods);
+const oneAst = mock.repr.ast.block([mock.repr.ast.number(1).with(defaultMods)], [], []).with(defaultMods);
 const one = mock.repr.runtime.number(1).with(defaultMods);
 
 runTestGroup({
