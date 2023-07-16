@@ -146,4 +146,4 @@ it('ignores open-block-comment tokens inside of block comments', () => pipeline(
     .build(mock.proto.code('#{#{}#}#'))
     .verifyBuild(BUILD_ERROR)
     .pass()
-)
+);
