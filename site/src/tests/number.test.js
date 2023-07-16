@@ -1,42 +1,27 @@
 import mock from "./utils/mock";
-import { pipeline } from "./utils/pipeline";
+import { runTestGroup } from "./utils/group";
 
 const defaultMods = [
     mock.repr.modifiers.noIdentity,
     mock.repr.modifiers.dataOnly
 ];
 
-it('creates the number zero', () => pipeline()
-    .build(mock.proto.code("0"))
-    .verifyBuild(mock.repr.ast.block([mock.repr.ast.number(0).with(defaultMods)], [], []).with(defaultMods))
-    .run()
-    .verifyRun(mock.repr.runtime.number(0).with(defaultMods))
-    .pass()
-);
+const zeroAst             = mock.repr.ast.block([mock.repr.ast.number(0).with(defaultMods)], [], []).with(defaultMods);
+const multiDigitNumberAst = mock.repr.ast.block([mock.repr.ast.number(1563).with(defaultMods)], [], []).with(defaultMods);
+const oneDpNumberAst      = mock.repr.ast.block([mock.repr.ast.number(156.3).with(defaultMods)], [], []).with(defaultMods);
+const multiDpNumberAst    = mock.repr.ast.block([mock.repr.ast.number(156.3623).with(defaultMods)], [], []).with(defaultMods);
 
-it('creates an integer number', () => pipeline()
-    .build(mock.proto.code("1563"))
-    .verifyBuild(mock.repr.ast.block([mock.repr.ast.number(1563).with(defaultMods)], [], []).with(defaultMods))
-    .run()
-    .verifyRun(mock.repr.runtime.number(1563).with(defaultMods))
-    .pass()
-);
+const zero             = mock.repr.runtime.number(0).with(defaultMods);
+const multiDigitNumber = mock.repr.runtime.number(1563).with(defaultMods);
+const oneDpNumber      = mock.repr.runtime.number(156.3).with(defaultMods);
+const multiDpNumber    = mock.repr.runtime.number(156.3623).with(defaultMods);
 
-it('creates a real number (1dp)', () => pipeline()
-    .build(mock.proto.code("156.3"))
-    .verifyBuild(mock.repr.ast.block([mock.repr.ast.number(156.3).with(defaultMods)], [], []).with(defaultMods))
-    .run()
-    .verifyRun(mock.repr.runtime.number(156.3).with(defaultMods))
-    .pass()
-);
-
-it('creates a real number (>1dp)', () => pipeline()
-    .build(mock.proto.code("156.3623"))
-    .verifyBuild(mock.repr.ast.block([mock.repr.ast.number(156.3623).with(defaultMods)], [], []).with(defaultMods))
-    .run()
-    .verifyRun(mock.repr.runtime.number(156.3623).with(defaultMods))
-    .pass()
-);
+runTestGroup([
+    ['creates the number zero',      ['0'],        zeroAst, zero],
+    ['creates an integer number',    ['1563'],     multiDigitNumberAst, multiDigitNumber],
+    ['creates a real number (1dp)',  ['156.3'],    oneDpNumberAst, oneDpNumber],
+    ['creates a real number (>1dp)', ['156.3623'], multiDpNumberAst, multiDpNumber]
+]);
 
 /*
  * Test:

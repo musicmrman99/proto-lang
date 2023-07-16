@@ -1,23 +1,17 @@
 import mock from "./utils/mock";
-import { pipeline } from "./utils/pipeline";
+import { runTestGroup } from "./utils/group";
 
 const defaultMods = [
     mock.repr.modifiers.noIdentity,
     mock.repr.modifiers.dataOnly
 ];
 
-it("creates a logical 'true' value", () => pipeline()
-    .build(mock.proto.code("true"))
-    .verifyBuild(mock.repr.ast.block([mock.repr.ast.logical(true).with(defaultMods)], [], []).with(defaultMods))
-    .run()
-    .verifyRun(mock.repr.runtime.logical(true).with(defaultMods))
-    .pass()
-);
+const trueAst = mock.repr.ast.block([mock.repr.ast.logical(true).with(defaultMods)], [], []).with(defaultMods);
+const falseAst = mock.repr.ast.block([mock.repr.ast.logical(false).with(defaultMods)], [], []).with(defaultMods);
+const trueValue = mock.repr.runtime.logical(true).with(defaultMods);
+const falseValue = mock.repr.runtime.logical(false).with(defaultMods);
 
-it("creates a logical 'false' value", () => pipeline()
-    .build(mock.proto.code("false"))
-    .verifyBuild(mock.repr.ast.block([mock.repr.ast.logical(false).with(defaultMods)], [], []).with(defaultMods))
-    .run()
-    .verifyRun(mock.repr.runtime.logical(false).with(defaultMods))
-    .pass()
-);
+runTestGroup([
+    ['creates a logical true value', ['true'], trueAst, trueValue],
+    ['creates a logical false value', ['false'], falseAst, falseValue]
+]);
