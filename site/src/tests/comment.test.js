@@ -1,5 +1,5 @@
 import mock from "./utils/mock";
-import pipeline from "./utils/pipeline";
+import { BUILD_ERROR, pipeline } from "./utils/pipeline";
 
 import isObject from "../utils/is-object";
 
@@ -133,9 +133,9 @@ const tests = {
 
 it.each(flattenTests(tests))('%s', (_, code, expectedAst, expectedValue) => pipeline()
     .build(mock.proto.code(...code))
-    .verifyAst(expectedAst)
+    .verifyBuild(expectedAst)
     .run()
-    .verifyResult(expectedValue)
+    .verifyRun(expectedValue)
     .pass()
 );
 
@@ -144,6 +144,6 @@ it.each(flattenTests(tests))('%s', (_, code, expectedAst, expectedValue) => pipe
 
 it('ignores open-block-comment tokens inside of block comments', () => pipeline()
     .build(mock.proto.code('#{#{}#}#'))
-    .verifyFailed()
+    .verifyBuild(BUILD_ERROR)
     .pass()
 )

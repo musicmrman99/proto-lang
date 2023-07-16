@@ -1,7 +1,10 @@
 import mock from "./mock";
 import MockError from "./mock-error";
 
-const pipeline = (state) => state == null ? pipeline({}) : ({
+export const BUILD_ERROR = Symbol('BUILD_ERROR');
+export const COMPUTE_ERROR = Symbol('COMPUTE_ERROR');
+
+export const pipeline = (state) => state == null ? pipeline({}) : ({
     // Build
     withConfig: (config) => pipeline(Object.assign({}, state, {
         config: config
@@ -15,19 +18,25 @@ const pipeline = (state) => state == null ? pipeline({}) : ({
             buildLog: log
         }));
     },
-    verifyAst: (targetAst) => {
+    verifyBuild: (targetAst) => {
         if (typeof targetAst === 'function') targetAst = targetAst(state);
 
-        expect(state.success).toBe(true);
-        if (state.ast !== Object(state.ast)) {
-            expect(state.ast).toBe(targetAst);
-        } else {
-            expect(state.ast).toMatchObject(targetAst);
-        }
+        if (Object.is(targetAst, BUILD_ERROR)) {
+            expect(state.success).toBe(false);
+            return pipeline(state);
 
-        return pipeline(Object.assign({}, state, {
-            targetAst: targetAst
-        }));
+        } else {
+            expect(state.success).toBe(true);
+            if (state.ast !== Object(state.ast)) {
+                expect(state.ast).toBe(targetAst);
+            } else {
+                expect(state.ast).toMatchObject(targetAst);
+            }
+
+            return pipeline(Object.assign({}, state, {
+                targetAst: targetAst
+            }));
+        }
     },
 
     // Run
@@ -43,30 +52,28 @@ const pipeline = (state) => state == null ? pipeline({}) : ({
             runLog: log
         }))
     },
-    verifyResult: (targetResult) => {
+    verifyRun: (targetResult) => {
         if (typeof targetResult === 'function') targetResult = targetResult(state);
 
-        expect(state.success).toBe(true);
-        if (state.result !== Object(state.result)) {
-            expect(state.result).toBe(targetResult);
+        if (Object.is(targetResult, COMPUTE_ERROR)) {
+            expect(state.success).toBe(false);
+            return pipeline(state);
+
         } else {
-            expect(state.result).toMatchObject(targetResult);
+            expect(state.success).toBe(true);
+            if (state.result !== Object(state.result)) {
+                expect(state.result).toBe(targetResult);
+            } else {
+                expect(state.result).toMatchObject(targetResult);
+            }
+
+            return pipeline(Object.assign({}, state, {
+                targetResult: targetResult
+            }));
         }
-
-        return pipeline(Object.assign({}, state, {
-            targetResult: targetResult
-        }));
-    },
-
-    // Can be used after either .build() or .run()
-    // .verifyAst() and .verifyResult() verify success for you
-    verifyFailed: () => {
-        expect(state.success).toBe(false);
-        return pipeline(state);
     },
 
     // Terminate test
     pass: () => undefined,
     fail: (reason) => { throw new MockError(reason) }
 });
-export default pipeline;

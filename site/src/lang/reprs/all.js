@@ -1,5 +1,7 @@
 import { Repr } from "./abstract/repr";
+
 import { Message } from "./general/message";
+import { Log } from "./general/log";
 
 import {
     LineComment,
@@ -75,6 +77,7 @@ const repr = Object.freeze({
 
     // General
     Message,
+    Log,
 
     // Build-Time Intermediate
     SentenceFragment,

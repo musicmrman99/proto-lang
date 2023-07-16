@@ -168,10 +168,7 @@ const runBlock = (stack, block, args) => {
  */
 const run = (ast, programInput) => {
   // Create the logging object
-  const log = {
-    success: true,
-    output: []
-  };
+  const log = new repr.Log();
 
   // Check for build errors
   if (ast == null) {
@@ -198,14 +195,14 @@ const run = (ast, programInput) => {
       }
 
     } catch (e) {
-      // Proto Error
-      if (e instanceof repr.ComputeError || e instanceof repr.Repr.Error) {
-        log.success = false;
-        log.output.push(new repr.Message("error", "Compute Error: " + e.message));
+      log.success = false;
+      log.errors.push(e);
 
-      // Native Error (eg. stack overflow, out of memory, etc.)
+      if (e instanceof repr.ComputeError || e instanceof repr.Repr.Error) {
+        // Proto Error
+        log.output.push(new repr.Message("error", "Compute Error: " + e.message));
       } else {
-        log.success = false;
+        // Native Error (eg. stack overflow, out of memory, etc.)
         log.output.push(new repr.Message("error", "Native Error: " + e.message+"\n" + e.stack));
       }
     }
