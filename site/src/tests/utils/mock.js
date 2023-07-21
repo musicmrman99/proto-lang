@@ -161,16 +161,6 @@ const mock = Object.freeze({
                                 .concat([mock.repr.ast.placeholder().with(mods)])
                         )
                         .slice(0, -1);
-                },
-                declarationFromCode: (declCode, mods) => {
-                    requireMockArg("Declaration", "declCode", declCode);
-                    requireMockArg("SentenceTemplate", "mods", mods);
-    
-                    const [templateStr, number] = declCode.split(' : ');
-                    return mock.repr.ast.declaration(
-                        mock.repr.ast.common.sentenceTemplate(templateStr, mods),
-                        mock.repr.ast.number(parseFloat(number)).with(mods)
-                    ).with(mods);
                 }
             })
         }),

@@ -23,15 +23,23 @@ const singleDpReal = mock.repr.runtime.number(156.3).with(defaultMods);
 const multiDpReal  = mock.repr.runtime.number(156.362).with(defaultMods);
 
 // AST and runtime constants - dependent Declarations
+const declarationFromCode = (declCode, mods) => {
+    const [templateStr, number] = declCode.split(' : ');
+    return mock.repr.ast.declaration(
+        mock.repr.ast.common.sentenceTemplate(templateStr, mods),
+        mock.repr.ast.number(parseFloat(number)).with(mods)
+    ).with(mods);
+};
+
 const dotBeforeDeclCode          = '.| : 0';
 const dotAfterDeclCode           = '|. : 1';
 const underscroreBetweenDeclCode = '|_| : 0';
 const scientificNotationDeclCode = '|e| : 0';
 
-const dotBeforeDecl          = mock.repr.ast.common.declarationFromCode(dotBeforeDeclCode, defaultMods);
-const dotAfterDecl           = mock.repr.ast.common.declarationFromCode(dotAfterDeclCode, defaultMods);
-const underscroreBetweenDecl = mock.repr.ast.common.declarationFromCode(underscroreBetweenDeclCode, defaultMods);
-const scientificNotationDecl = mock.repr.ast.common.declarationFromCode(scientificNotationDeclCode, defaultMods);
+const dotBeforeDecl          = declarationFromCode(dotBeforeDeclCode, defaultMods);
+const dotAfterDecl           = declarationFromCode(dotAfterDeclCode, defaultMods);
+const underscroreBetweenDecl = declarationFromCode(underscroreBetweenDeclCode, defaultMods);
+const scientificNotationDecl = declarationFromCode(scientificNotationDeclCode, defaultMods);
 
 const defaultDeclsCode = [
     dotBeforeDeclCode,
