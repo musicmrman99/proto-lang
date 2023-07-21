@@ -81,7 +81,6 @@ const mock = Object.freeze({
                 requireMockArg("Logical", "value", value);
                 return mock.repr.modifiers.wrap(new repr.Logical(value));
             },
-
             map: (children, associations) => {
                 requireMockArg("Map", "children", children);
                 requireMockArg("Map", "associations", associations);
@@ -97,7 +96,6 @@ const mock = Object.freeze({
                 node.associations = associations;
                 return mock.repr.modifiers.wrap(node);
             },
-
             block: (children, decls, reqEncDecls) => {
                 requireMockArg("Block", "children", children);
                 requireMockArg("Block", "decls", decls);
@@ -123,40 +121,58 @@ const mock = Object.freeze({
             placeholder: () => {
                 return mock.repr.modifiers.wrap(new repr.PlaceholderOperator());
             },
-            sentenceTemplate: (templateStr, mods = []) => {
-                requireMockArg("SentenceTemplate", "templateStr", templateStr);
-
-                if (templateStr.length === 0) return [];
-                if (!templateStr.includes("|")) return [mock.repr.ast.sentenceFragment(templateStr).with(mods)];
-                return templateStr
-                    .split("|")
-                    .flatMap((fragment) =>
-                        (fragment.length > 0 ? [mock.repr.ast.sentenceFragment(fragment).with(mods)] : [])
-                            .concat([mock.repr.ast.placeholder().with(mods)])
-                    )
-                    .slice(0, -1);
-            },
             declaration: (template, value) => {
                 requireMockArg("Declaration", "template", template);
                 requireMockArg("Declaration", "value", value);
 
                 return mock.repr.modifiers.wrap(new repr.Declaration(template, value));
             },
-            declarationFromCode: (declCode, mods = []) => {
-                requireMockArg("Declaration", "declCode", declCode);
-
-                const [templateStr, number] = declCode.split(' : ');
-                return mock.repr.ast.declaration(
-                    mock.repr.ast.sentenceTemplate(templateStr, mods),
-                    mock.repr.ast.number(parseFloat(number)).with(mods)
-                ).with(mods);
-            },
             sentence: (decl, params) => {
                 requireMockArg("Sentence", "decl", decl);
                 requireMockArg("Sentence", "params", params);
 
                 return mock.repr.modifiers.wrap(new repr.Sentence(decl, params));
-            }
+            },
+
+            common: Object.freeze({
+                blockWithInitialDecls: (children, decls, reqEncDecls) => {
+                    requireMockArg("Block", "children", children);
+                    requireMockArg("Block", "decls", decls);
+                    requireMockArg("Block", "reqEncDecls", reqEncDecls);
+    
+                    return mock.repr.ast.block(decls.concat(children), decls, reqEncDecls);
+                },
+
+                sentenceTemplate: (templateStr, mods) => {
+                    requireMockArg("SentenceTemplate", "templateStr", templateStr);
+                    requireMockArg("SentenceTemplate", "mods", mods);
+    
+                    if (templateStr.length === 0) return [];
+                    if (!templateStr.includes("|")) {
+                        return [mock.repr.ast.sentenceFragment(templateStr).with(mods)];
+                    }
+                    return templateStr
+                        .split("|")
+                        .flatMap((fragment) =>
+                            (fragment.length > 0 ?
+                                [mock.repr.ast.sentenceFragment(fragment).with(mods)] :
+                                []
+                            )
+                                .concat([mock.repr.ast.placeholder().with(mods)])
+                        )
+                        .slice(0, -1);
+                },
+                declarationFromCode: (declCode, mods) => {
+                    requireMockArg("Declaration", "declCode", declCode);
+                    requireMockArg("SentenceTemplate", "mods", mods);
+    
+                    const [templateStr, number] = declCode.split(' : ');
+                    return mock.repr.ast.declaration(
+                        mock.repr.ast.common.sentenceTemplate(templateStr, mods),
+                        mock.repr.ast.number(parseFloat(number)).with(mods)
+                    ).with(mods);
+                }
+            })
         }),
 
         runtime: {
