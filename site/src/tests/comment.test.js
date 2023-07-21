@@ -105,13 +105,13 @@ runTestGroup({
             ],
 
             'literals': [
-                ['ignores number literals in a block comment',         ['#{ hi 5, we like you }#'],        nullAst, null],
-                ['ignores decimal number literals in a block comment', ['#{ hi, 5.4 you, we like you }#'], nullAst, null],
-                ['ignores text literals in a block comment',           ['#{ hi "friend", we like you }#'], nullAst, null],
-                ['ignores logical literals in a block comment',        ['#{ hi true and false, yo }#'],    nullAst, null],
-                ['ignores map literals in a block comment',            ['#{ hi [5], we like you }#'],      nullAst, null],
-                ['ignores block literals in a block comment',          ['#{ hi {5}, we like you }#'],      nullAst, null],
-                ['ignores line comments in a block comment',           ['#{ hi #friend, we like you }#'],  nullAst, null]
+                ['ignores number literals in a block comment',      ['#{ hi 5, we like you }#'],        nullAst, null],
+                ['ignores real number literals in a block comment', ['#{ hi 5.4 you, we like you }#'],  nullAst, null],
+                ['ignores text literals in a block comment',        ['#{ hi "friend", we like you }#'], nullAst, null],
+                ['ignores logical literals in a block comment',     ['#{ hi true and false, yo }#'],    nullAst, null],
+                ['ignores map literals in a block comment',         ['#{ hi [5], we like you }#'],      nullAst, null],
+                ['ignores block literals in a block comment',       ['#{ hi {5}, we like you }#'],      nullAst, null],
+                ['ignores line comments in a block comment',        ['#{ hi #friend, we like you }#'],  nullAst, null]
             ]
         }
 
