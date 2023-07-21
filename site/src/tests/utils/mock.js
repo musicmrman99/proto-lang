@@ -114,6 +114,48 @@ const mock = Object.freeze({
                 node.decls = decls;
                 node.reqEncDecls = reqEncDecls;
                 return mock.repr.modifiers.wrap(node);
+            },
+
+            sentenceFragment: (content) => {
+                requireMockArg("SentenceFragment", "content", content);
+                return mock.repr.modifiers.wrap(new repr.SentenceFragment(content));
+            },
+            placeholder: () => {
+                return mock.repr.modifiers.wrap(new repr.PlaceholderOperator());
+            },
+            sentenceTemplate: (templateStr, mods = []) => {
+                requireMockArg("SentenceTemplate", "templateStr", templateStr);
+
+                if (templateStr.length === 0) return [];
+                if (!templateStr.includes("|")) return [mock.repr.ast.sentenceFragment(templateStr).with(mods)];
+                return templateStr
+                    .split("|")
+                    .flatMap((fragment) =>
+                        (fragment.length > 0 ? [mock.repr.ast.sentenceFragment(fragment).with(mods)] : [])
+                            .concat([mock.repr.ast.placeholder().with(mods)])
+                    )
+                    .slice(0, -1);
+            },
+            declaration: (template, value) => {
+                requireMockArg("Declaration", "template", template);
+                requireMockArg("Declaration", "value", value);
+
+                return mock.repr.modifiers.wrap(new repr.Declaration(template, value));
+            },
+            declarationFromCode: (declCode, mods = []) => {
+                requireMockArg("Declaration", "declCode", declCode);
+
+                const [templateStr, number] = declCode.split(' : ');
+                return mock.repr.ast.declaration(
+                    mock.repr.ast.sentenceTemplate(templateStr, mods),
+                    mock.repr.ast.number(parseFloat(number)).with(mods)
+                ).with(mods);
+            },
+            sentence: (decl, params) => {
+                requireMockArg("Sentence", "decl", decl);
+                requireMockArg("Sentence", "params", params);
+
+                return mock.repr.modifiers.wrap(new repr.Sentence(decl, params));
             }
         }),
 
